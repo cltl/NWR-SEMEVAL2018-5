@@ -1,0 +1,16 @@
+# Created by .ignore support plugin (hsz.mobi)
+### Example user template template
+### Example user template
+
+# IntelliJ project files
+.idea
+*.iml
+/target
+/examples
+
+examples/s3/CONLL/
+examples/s3/questions.json
+nwrsemeval20185.iml
+nwrsemeval20185.ipr
+nwrsemeval20185.iws
+target/
