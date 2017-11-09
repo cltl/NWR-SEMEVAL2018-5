@@ -53,9 +53,15 @@ public class CoNLLdata {
             String str = fields[0];
             int idx_1 = str.indexOf(".");
             int idx_2 = str.lastIndexOf(".");
+          //  System.out.println("str = " + str);
             this.fileName = str.substring(0, idx_1);
-            this.sentence = str.substring(idx_1, idx_2);
-            this.tokenId = str.substring(idx_2+1);
+            if (idx_2>-1 && idx_2>idx_1) {
+                this.sentence = str.substring(idx_1 + 2, idx_2);
+                this.tokenId = str.substring(idx_2 + 1);
+            }
+            else {
+//
+            }
             this.word = fields[1];
             this.dunit = fields[2];
             this.tag = fields[3];

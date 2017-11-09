@@ -52,7 +52,7 @@ public class ConllNafConversion {
 
     static public void main(String[] args) {
         String inputfolder = "";
-        inputfolder = "/Code/vu/newsreader/nwr-semeval2018-5-bu/examples/s3/CONLL/";
+        inputfolder = "/Code/vu/newsreader/NWR-SEMEVAL2018-5/examples/s3/CONLL/";
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             if (arg.equals("--folder") && args.length>(i+1)) {
@@ -62,6 +62,7 @@ public class ConllNafConversion {
         ArrayList<File> files = util.Util.makeRecursiveFileList(new File(inputfolder), ".conll");
         for (int i = 0; i < files.size(); i++) {
             File file = files.get(i);
+            System.out.println("file.getName() = " + file.getName());
             test(new File(inputfolder), file);
         }
     }
@@ -72,81 +73,6 @@ public class ConllNafConversion {
     }
 
 
-    /*static void readCoNLLFile (File coNLLfile, File kafFile) {
-        KafSaxParser kafSaxParser = new KafSaxParser();
-        kafSaxParser.parseFile(kafFile);
-        // System.out.println("kafFile.getName() = " + kafFile.getName());
-        HashMap<String, CoNLLdata> conllDataMap = new HashMap<String,CoNLLdata>();
-        try {
-            FileInputStream fis = new FileInputStream(coNLLfile);
-            InputStreamReader isr = new InputStreamReader(fis);
-            BufferedReader in = new BufferedReader(isr);
-            String inputLine = "";
-            while (in.ready() && (inputLine = in.readLine()) != null) {
-                String[] fields = inputLine.split("\t");
-                if (fields.length == 5) {
-                    String fileId = fields[0];
-                    // System.out.println("fileId = " + fileId);
-                    if (kafFile.getName().startsWith(fileId) &&
-                            !kafFile.getName().startsWith(fileId+"plus")) {
-                        String sentenceId = fields[1];
-                        String tokenId = "w"+fields[2];
-                        String token = fields[3];
-                        String tag = fields[4];
-                        if (!tag.equals("-")) {
-                            //  System.out.println("tokenId = " + tokenId);
-                            KafTerm term = kafSaxParser.getTermForWordId(tokenId);
-                            if (term != null) {
-                                CoNLLdata coNLLdata = new CoNLLdata(fileId, sentenceId, tokenId, token, tag);
-                                conllDataMap.put(term.getTid(), coNLLdata);
-                            }
-                            else {
-                                //   System.out.println("no term for tokenId = " + tokenId);
-                            }
-                        }
-                    }
-                }
-            }
-            in.close();
-            System.out.println("conllDataMap = " + conllDataMap.size());
-            for (int i = 0; i < kafSaxParser.kafEventArrayList.size(); i++) {
-                KafEvent kafEvent = kafSaxParser.kafEventArrayList.get(i);
-                ArrayList<String> spanIds = kafEvent.getSpanIds();
-                boolean match = false;
-                for (int j = 0; j < spanIds.size(); j++) {
-                    String s = spanIds.get(j);
-                    if (conllDataMap.containsKey(s)) {
-                        matchedEvents.add(s);
-                        kafEvent.setStatus("true");
-                        System.out.println("true = " + s);
-                    }
-                }
-                if (!match) {
-                    kafEvent.setStatus("false");
-                }
-            }
-            Set keySet = conllDataMap.keySet();
-            Iterator<String> keys = keySet.iterator();
-            while (keys.hasNext()) {
-                String key = keys.next();
-                if (!matchedEvents.contains(key)) {
-                    KafEvent kafEvent = new KafEvent();
-                    int n = kafSaxParser.kafEntityArrayList.size();
-                    kafEvent.setId("p"+n);
-                    kafEvent.setStatus("new");
-                    System.out.println("new = " + key);
-                    CorefTarget corefTarget = new CorefTarget();
-                    corefTarget.setId(key);
-                    kafEvent.addSpan(corefTarget);
-                    kafSaxParser.kafEventArrayList.add(kafEvent);
-                }
-            }
-            //  kafSaxParser.writeNafToStream(System.out);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-*/
 
     static void readCoNLLFile(File parentFolder, File coNLLfile) {
         /*
@@ -177,11 +103,11 @@ e54a480756b852ed2f0596e130652b64.b20.21	NEWLINE	BODY	-
             while (in.ready() && (inputLine = in.readLine()) != null) {
                 if (inputLine.startsWith("#begin document")) {
                     //#begin document (a212420b8d7c079bd385ff4dba9fea86);
-                    System.out.println("inputLine = " + inputLine);
                     kafSaxParser.init();
                     rawText = "";
                     fileName = inputLine.substring(inputLine.indexOf("(")+1, inputLine.lastIndexOf(")"));
                     kafSaxParser.getKafMetaData().setUrl(fileName);
+                    kafSaxParser.getKafMetaData().setLanguage("en");
                 }
                 else if (inputLine.startsWith("#end document")) {
                     kafSaxParser.rawText = rawText.trim();
@@ -194,10 +120,29 @@ e54a480756b852ed2f0596e130652b64.b20.21	NEWLINE	BODY	-
                     String[] fields = inputLine.split("\t");
                     if (fields.length==4) {
                         CoNLLdata coNLLdata = new CoNLLdata(inputLine);
-                        rawText += " "+coNLLdata.getWord();
-                        int n = kafSaxParser.getKafWordFormList().size()+1;
-                        KafWordForm kafWordForm = coNLLdata.toKafWordForm(n);
-                        kafSaxParser.kafWordFormList.add(kafWordForm);
+                        if (coNLLdata.getDunit().equals("DCT")) {
+                            /**
+                             * http://www.w3.org/TR/xmlschema-2/#isoformats.
+                             * In summary, the date is specified follow- ing the form “YYYY-MM-DDThh:mm:ss” (all fields required).
+                             * To specify a time zone, you can either enter a dateTime in UTC time by adding a ”Z” behind the time (“2002-05-30T09:00:00Z”)
+                             * or you can specify an offset from the UTC time by adding a positive or negative time behind the time (“2002-05- 30T09:00:00+06:00”).
+                             * <fileDesc creationtime="2017-01-13"/>
+                             * <fileDesc creationtime="2017-01-13T00:00:00"/>
+                             */
+                            kafSaxParser.getKafMetaData().setCreationtime(coNLLdata.getWord());
+                        }
+                        if (coNLLdata.getWord().equals("NEWLINE")) {
+                            rawText+="\n";
+                        }
+                        else {
+
+                            int n = kafSaxParser.getKafWordFormList().size()+1;
+                            KafWordForm kafWordForm = coNLLdata.toKafWordForm(n);
+                            kafWordForm.setCharOffset(Integer.toString(rawText.length()));
+                            kafWordForm.setCharLength(Integer.toString(coNLLdata.getWord().length()));
+                            rawText += " " + coNLLdata.getWord();
+                            kafSaxParser.kafWordFormList.add(kafWordForm);
+                        }
                     }
                     else {
                         System.out.println("inputLine = " + inputLine);
@@ -212,44 +157,4 @@ e54a480756b852ed2f0596e130652b64.b20.21	NEWLINE	BODY	-
     }
 
 
-/*    static void readCoNLLFile(String coNLLfile, String incident, int tokenColumn) {
-
-
-        HashMap<String, CoNLLdata> conllDataMap = new HashMap<String, CoNLLdata>();
-        try {
-            FileInputStream fis = new FileInputStream(coNLLfile);
-            InputStreamReader isr = new InputStreamReader(fis);
-            BufferedReader in = new BufferedReader(isr);
-            String inputLine = "";
-            HashMap<String, String> fileContentMap = new HashMap<String, String>();
-            while (in.ready() && (inputLine = in.readLine()) != null) {
-                String[] fields = inputLine.split("\t");
-                if (fields.length > tokenColumn) {
-                    String fileName = fields[0];
-                    String token = fields[tokenColumn];
-                    if (token.equals("NEWLINE")) token = "\n";
-                    if (fileContentMap.containsKey(fileName)) {
-                        String content = fileContentMap.get(fileName);
-                        content += " " + token;
-                        fileContentMap.put(fileName, content);
-                    } else {
-                        fileContentMap.put(fileName, token);
-                    }
-                }
-            }
-            in.close();
-            Set keySet = fileContentMap.keySet();
-            Iterator<String> keys = keySet.iterator();
-            while (keys.hasNext()) {
-                String file = keys.next();
-                String content = fileContentMap.get(file);
-                String filePath = incident + "---" + file + ".txt";
-                OutputStream fos = new FileOutputStream(filePath);
-                fos.write(content.getBytes());
-                fos.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }*/
 }
