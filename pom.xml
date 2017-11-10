@@ -12,9 +12,9 @@
     <description>NewsReader participation in the SemEval2018 task 5</description>
     <url>http://www.newsreader-project.eu</url>
     <scm>
-        <connection>scm:git:git@github.com/cltl/NWR-SEMEVAL2018-5</connection>
-        <developerConnection>scm:git:git@github.com/cltl/NWR-SEMEVAL2018-5</developerConnection>
-        <url>git@github.com/cltl/NWR-SEMEVAL2018-5</url>
+        <connection>scm:git:git@github.com/cltl/nwr-semeval2018-5</connection>
+        <developerConnection>scm:git:git@github.com/cltl/nwr-semeval2018-5</developerConnection>
+        <url>git@github.com/cltl/nwr-semeval2018-5</url>
     </scm>
 
     <licenses>
@@ -67,11 +67,23 @@
             <version>v3.0</version>
             <scope>compile</scope>
         </dependency>
+
         <dependency>
+            <groupId>com.github.cltl</groupId>
+            <artifactId>nwr-knowledgestore-api</artifactId>
+            <version>1.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.googlecode.json-simple</groupId>
+            <artifactId>json-simple</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+<!--        <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20090211</version>
-        </dependency>
+        </dependency>-->
     </dependencies>
 
     <build>
@@ -82,8 +94,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>2.0</version>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>1.7</source>
+                    <target>1.7</target>
                     <debug>false</debug>
                 </configuration>
             </plugin>

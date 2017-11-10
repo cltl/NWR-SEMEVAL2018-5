@@ -16,13 +16,28 @@ public class Questiondata {
      },
      "verbose_question": "How many people were killed in 14/03/2017 (day) in ('California', 'Hayward') (city) ?"
      },
+
+
+     "3-58795": {
+     "event_type": "killing",
+     "location": {
+     "state": "http://dbpedia.org/resource/California"
+     },
+     "subtask": 3,
+     "time": {
+     "month": "01/2017"
+     },
+     "verbose_question": "How many people were killed in 01/2017 (month) in ('California',) (state) ?"
+     },
      */
 
     String id;
     String event_type;
-    String location;
+    String state;
     String city;
-    String time;
+    String year;
+    String month;
+    String day;
     String subtask;
     String verbose_question;
 
@@ -33,9 +48,11 @@ public class Questiondata {
     void init() {
          id="";
          event_type="";
-         location="";
+         state="";
          city="";
-         time="";
+         year="";
+         month="";
+         day="";
          subtask="";
          verbose_question="";
     }
@@ -56,12 +73,12 @@ public class Questiondata {
         this.event_type = event_type;
     }
 
-    public String getLocation() {
-        return location;
+    public String getState() {
+        return state;
     }
 
-    public void setLocation(String location) {
-        this.location = location;
+    public void setState(String state) {
+        this.state = state;
     }
 
     public String getCity() {
@@ -72,12 +89,28 @@ public class Questiondata {
         this.city = city;
     }
 
-    public String getTime() {
-        return time;
+    public String getYear() {
+        return year;
     }
 
-    public void setTime(String time) {
-        this.time = time;
+    public void setYear(String year) {
+        this.year = year;
+    }
+
+    public String getMonth() {
+        return month;
+    }
+
+    public void setMonth(String month) {
+        this.month = month;
+    }
+
+    public String getDay() {
+        return day;
+    }
+
+    public void setDay(String day) {
+        this.day = day;
     }
 
     public String getSubtask() {

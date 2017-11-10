@@ -1,5 +1,7 @@
 package question;
 
+import org.json.JSONObject;
+
 /**
  * Created by piek on 09/11/2017.
  */
@@ -31,5 +33,8 @@ public class QuestionReader {
      },
      */
 
-    
+    static public String jsonQuestionToSparql (JSONObject jsonObject) {
+        String sparqlString = "";
+        return sparqlString;
+    }
 }
