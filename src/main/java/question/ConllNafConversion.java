@@ -131,7 +131,7 @@ e54a480756b852ed2f0596e130652b64.b20.21	NEWLINE	BODY	-
                              */
                             kafSaxParser.getKafMetaData().setCreationtime(coNLLdata.getWord());
                         }
-                        if (coNLLdata.getWord().equals("NEWLINE")) {
+                        else if (coNLLdata.getWord().equals("NEWLINE")) {
                             rawText+="\n";
                         }
                         else {

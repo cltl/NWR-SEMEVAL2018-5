@@ -115,6 +115,20 @@ public class CoNLLdata {
         return dunit;
     }
 
+    public Integer getDunitInteger () {
+        Integer integer = new Integer(0);
+        if (dunit.equals("DCT")) {
+            integer = 0;
+        }
+        else if (dunit.equals("TITLE")) {
+            integer = 1;
+        }
+        else {
+            integer = 2;
+        }
+        return  integer;
+    }
+
     public void setDunit(String dunit) {
         this.dunit = dunit;
     }
@@ -132,10 +146,11 @@ public class CoNLLdata {
 
     public KafWordForm toKafWordForm (int n) {
         KafWordForm kafWordForm = new KafWordForm();
-        kafWordForm.setWid(Integer.toString(n));
+        kafWordForm.setWid("w"+Integer.toString(n));
         kafWordForm.setWf(this.word);
         kafWordForm.setSent(this.sentence);
-        kafWordForm.setPara(this.dunit);
+        /// paragraph must be a number
+        kafWordForm.setPara(this.getDunitInteger().toString());
         return kafWordForm;
     }
 }
