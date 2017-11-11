@@ -14,6 +14,18 @@ import java.util.ArrayList;
  */
 public class Util {
 
+    static public String getNumericId (String id) {
+        //1_10ecbplus.xml.naf.fix.xml#ev27
+        final String number="12334567890";
+        String numString = "";
+        for (int i = 0; i < id.length(); i++) {
+            char c = id.charAt(i);
+            if (number.indexOf(c)>-1) {
+                numString+= c;
+            }
+        }
+        return numString;
+    }
 
     public static String makeSparqlQueryInit () {
         String sparqQueryInit = "PREFIX sem: <http://semanticweb.cs.vu.nl/2009/11/sem/> \n" +
@@ -66,7 +78,7 @@ public class Util {
         JSONObject jsonObject  = null;
         JSONParser parser = new JSONParser();
         try {
-            Object obj = parser.parse(new FileReader("test.json"));
+            Object obj = parser.parse(new FileReader(filePath));
             jsonObject = (JSONObject) obj;
         } catch (FileNotFoundException e) {
             e.printStackTrace();

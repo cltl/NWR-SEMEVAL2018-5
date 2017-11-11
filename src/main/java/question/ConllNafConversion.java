@@ -52,7 +52,7 @@ public class ConllNafConversion {
 
     static public void main(String[] args) {
         String inputfolder = "";
-        inputfolder = "/Code/vu/newsreader/NWR-SEMEVAL2018-5/examples/s3/CONLL/";
+        inputfolder = "/Users/piek/Desktop/SemEval2018/trial_data/input/s3/CONLL/";
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             if (arg.equals("--folder") && args.length>(i+1)) {
@@ -135,9 +135,10 @@ e54a480756b852ed2f0596e130652b64.b20.21	NEWLINE	BODY	-
                             rawText+="\n";
                         }
                         else {
-
-                            int n = kafSaxParser.getKafWordFormList().size()+1;
-                            KafWordForm kafWordForm = coNLLdata.toKafWordForm(n);
+                            //e54a480756b852ed2f0596e130652b64.b20.20	.	BODY	-
+                           // int n = kafSaxParser.getKafWordFormList().size()+1;
+                           // Integer numericId = Integer.parseInt(Util.getNumericId(inputLine));
+                            KafWordForm kafWordForm = coNLLdata.toKafWordForm();
                             kafWordForm.setCharOffset(Integer.toString(rawText.length()));
                             kafWordForm.setCharLength(Integer.toString(coNLLdata.getWord().length()));
                             rawText += " " + coNLLdata.getWord();

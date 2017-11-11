@@ -8,17 +8,6 @@ import org.json.JSONObject;
  * Created by piek on 02/03/16.
  */
 public class CoNLLdata {
-    /*
-    1_10ecb	0	1	Perennial	-
-1_10ecb	0	2	party	-
-1_10ecb	0	3	girl	-
-1_10ecb	0	4	Tara	-
-1_10ecb	0	5	Reid	-
-1_10ecb	0	6	checked	(132016236402809085484)
-1_10ecb	0	7	herself	-
-1_10ecb	0	8	into	(132016236402809085484)
-
-     */
 
     private String fileName;
     private String sentence;
@@ -26,6 +15,7 @@ public class CoNLLdata {
     private String dunit;
     private String word;
     private String tag;
+    private String conllLineWithoutTag;
 
 
     void init () {
@@ -35,6 +25,7 @@ public class CoNLLdata {
         this.dunit = "";
         this.tokenId = "";
         this.word = "";
+        this.conllLineWithoutTag = "";
     }
 
     public CoNLLdata() {
@@ -44,32 +35,29 @@ public class CoNLLdata {
 
     public CoNLLdata(String line) {
         // e54a480756b852ed2f0596e130652b64.b20.21	NEWLINE	BODY	-
-
-        //object.toString() = {"sentence":".t1","dunit":"TITLE","filename":"daadc88e95b4066652550d977d0bf96f","tokenId":".10","tag":"-","word":"that"}
-
         init();
         String[] fields = line.split("\t");
         if (fields.length==4) {
             String str = fields[0];
             int idx_1 = str.indexOf(".");
             int idx_2 = str.lastIndexOf(".");
-          //  System.out.println("str = " + str);
             this.fileName = str.substring(0, idx_1);
             if (idx_2>-1 && idx_2>idx_1) {
                 this.sentence = str.substring(idx_1 + 2, idx_2);
-                this.tokenId = str.substring(idx_2 + 1);
+                this.tokenId = str.substring(idx_2+1);
             }
-            else {
-//
-            }
+            else {}
             this.word = fields[1];
             this.dunit = fields[2];
             this.tag = fields[3];
+            for (int i = 0; i < fields.length-1; i++) {
+                String field = fields[i];
+                this.conllLineWithoutTag += field+"\t";
+            }
         }
-        else {
-            System.out.println("line = " + line);
-        }
+        else {}
     }
+
 
     public String getFileName() {
         return fileName;
@@ -133,6 +121,10 @@ public class CoNLLdata {
         this.dunit = dunit;
     }
 
+    public String toConll (String tag) {
+        return conllLineWithoutTag+tag+"\n";
+    }
+
     public JSONObject toJsonObject () throws JSONException {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("filename", this.fileName);
@@ -152,5 +144,27 @@ public class CoNLLdata {
         /// paragraph must be a number
         kafWordForm.setPara(this.getDunitInteger().toString());
         return kafWordForm;
+    }
+
+    public KafWordForm toKafWordForm () {
+        KafWordForm kafWordForm = new KafWordForm();
+        kafWordForm.setWid("w"+getUniqueTokenString());
+        kafWordForm.setWf(this.word);
+        kafWordForm.setSent(this.sentence);
+        /// paragraph must be a number
+        kafWordForm.setPara(this.getDunitInteger().toString());
+        return kafWordForm;
+    }
+
+    public String getUniqueTokenString() {
+
+        String tokStr = getDunitInteger().toString();
+        if (this.sentence.length()==1) tokStr+="00";
+        if (this.sentence.length()==2) tokStr+="0";
+        tokStr+=this.sentence;
+        if (this.tokenId.length()==1) tokStr+="00";
+        if (this.tokenId.length()==2) tokStr+="0";
+        tokStr += this.tokenId;
+        return tokStr;
     }
 }
