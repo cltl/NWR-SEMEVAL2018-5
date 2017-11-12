@@ -14,6 +14,13 @@ import java.util.ArrayList;
  */
 public class Util {
 
+
+    static public Integer getEventId (String eventId, ArrayList<String> allEventKeys) {
+        Integer intId = new Integer(allEventKeys.indexOf(eventId));
+        intId++;   //// add one so we do not get a zero ID
+        return intId;
+    }
+
     static public String getNumericId (String id) {
         //1_10ecbplus.xml.naf.fix.xml#ev27
         final String number="12334567890";
@@ -26,6 +33,7 @@ public class Util {
         }
         return numString;
     }
+
 
     public static String makeSparqlQueryInit () {
         String sparqQueryInit = "PREFIX sem: <http://semanticweb.cs.vu.nl/2009/11/sem/> \n" +

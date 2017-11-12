@@ -24,7 +24,7 @@ import java.util.Set;
  */
 public class Task5Trig {
 
-
+    static ArrayList<String> allEventKeys = new ArrayList<>();
 
     static public void main(String[] args) {
         String pathToQuestionFile = "/Users/piek/Desktop/SemEval2018/trial_data/input/s3/questions.json";
@@ -38,7 +38,8 @@ public class Task5Trig {
         ArrayList<String> domainEvents = EventTypes.getEventSubjectUris(trigTripleData.tripleMapInstances);
         HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
-
+        System.out.println("eckgMap = " + eckgMap.size());
+        System.out.println("domainEvents = " + domainEvents.size());
 /*        try {
             OutputStream fos = new FileOutputStream(pathToQuestionFile+".eckg");
             TrigUtil.printKnowledgeGraph(fos, eckgMap, seckgMap);
@@ -60,7 +61,7 @@ public class Task5Trig {
                // System.out.println("questionId = " + questionId);
                 Object question = jsonObject.get(questionId);
                 Questiondata questiondata = new Questiondata(questionId, (JSONObject) question);
-                ArrayList<String> eventKeys = new ArrayList<>();
+                ArrayList<String> eventKeys = new ArrayList<>(); // for adding events that matter
                 Set keySet = seckgMap.keySet();
                 Iterator<String> keys = keySet.iterator();
                 while (keys.hasNext()) {
@@ -70,48 +71,54 @@ public class Task5Trig {
                         if (!eventKeys.contains(eventKey)) eventKeys.add(eventKey);
                     }
                 }
-                JSONObject answerObject = new JSONObject();
-                answerObject.put("numerical_anwer", eventKeys.size());
-                for (int i = 0; i < eventKeys.size(); i++) {
-                    String eventKey = eventKeys.get(i);
-                    JSONObject documentObject = new JSONObject();
-                    String eventId = Util.getNumericId(eventKey);
-                    ArrayList<Statement> directStatements = eckgMap.get(eventKey);
-                    ArrayList<String> fileNames = getFilesFromStatements(directStatements);
-                    for (int j = 0; j < fileNames.size(); j++) {
-                        String s = fileNames.get(j);
-                        documentObject.put(eventId, s);
-                    }
-                    answerObject.put("answer_docs", documentObject);
-                }
-                answerObjectArray.put(questionId, answerObject);
-                /**
-                 *
-                 "2-6871": {
-                 "answer_docs": {
-                 "799973": [
-                 "3193b95f6cf7cc55977eecee652a1c11",
-                 "d946a60729e647458a12be6bf1e938c2"
-                 ],
-                 "803822": [
-                 "ebc6cc8eac3bd2fe52fa20c9f893e0ae",
-                 "b80d73dbddcfb3d939aed0486022ecc1",
-                 "3468a5abcade68507b6ecd0bbd9ed7cf",
-                 "8b3b34bf4feb61c23f7392eafbb517a4",
-                 "c3ae54561642c62433537ddb9f3e7fb8",
-                 "a5795e3d5be396f0815785ce7a4948ac"
-                 ]
-                 },
-                 "numerical_answer": 2
-                 },
-                 */
+
                 //// add event tokenids to augment the CoNLL files with mentions
                 getTokenEventMap(tokenEventIdMap, eventKeys, eckgMap);
+
+
+                JSONObject answerObject = new JSONObject();
+                answerObject.put("numerical_anwer", eventKeys.size());
+                JSONObject docObject = new JSONObject();
+                for (int i = 0; i < eventKeys.size(); i++) {
+                    String eventKey = eventKeys.get(i);
+                    Integer intId = Util.getEventId(eventKey, allEventKeys);
+                    ArrayList<Statement> directStatements = eckgMap.get(eventKey);
+                    ArrayList<String> fileNames = getFilesFromStatements(directStatements);
+                    docObject.put(intId.toString(), fileNames);
+                }
+                answerObject.put ("answer_docs",docObject);
+                answerObjectArray.put(questionId, answerObject);
+
+                /**
+                 *
+                 *
+                 "3-59876" : {
+                 "answer_docs" : {
+                 "3" : [ "4f7fc8d1692d6bb2f5e450a23e90a034" ],
+                 "4" : [ "4f7fc8d1692d6bb2f5e450a23e90a034" ],
+                 "5" : [ "4f7fc8d1692d6bb2f5e450a23e90a034" ]
+                 },
+                 "numerical_anwer" : 3
+                 },
+                 *
+
+                 "3-58117": {
+                 "answer_docs": {
+                 "750833": [
+                 "f2b694085da3d4c7a47b9daf84203fc2"
+                 ]
+                 },
+                 "numerical_answer": 2,
+                 "part_info": {
+                 "750833": {
+                 "num_injured": 0,
+                 "num_killed": 2
+                 }
+                 }
+                 },
+                 */
             }
-
             try (FileWriter file = new FileWriter(pathToQuestionFile+".answer.json")) {
-
-
                 ObjectMapper mapper = new ObjectMapper();
                 file.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(answerObjectArray));
                 file.flush();
@@ -121,10 +128,16 @@ public class Task5Trig {
             }
 
 
+            System.out.println("tokenEventIdMap = " + tokenEventIdMap.size());
+            File conllFolder = new File (pathToConllFiles);
+            File conllParentFile = conllFolder.getParentFile();
+            File conllResultFolder = new File(conllParentFile.getAbsolutePath()+"/"+conllFolder.getName()+"RESULT");
+            if (!conllResultFolder.exists()) conllResultFolder.mkdir();
             /// process the CONLL files
             for (int i = 0; i < conllFiles.size(); i++) {
                 File conllFile =conllFiles.get(i);
-                ConllAnswerFromSem.resultForCoNLLFile(conllFile, tokenEventIdMap);
+               // System.out.println("conllFile = " + conllFile);
+                ConllAnswerFromSem.resultForCoNLLFile(conllResultFolder, conllFile, allEventKeys, tokenEventIdMap);
             }
 
         } catch (Exception e) {
@@ -176,17 +189,20 @@ public class Task5Trig {
     }
 
     static  void getTokenEventMap (HashMap<String, String> tokenEventMap, ArrayList<String> eventKeys, HashMap<String, ArrayList<Statement>> kGraph) {
+
         for (int i = 0; i < eventKeys.size(); i++) {
             String eventKey = eventKeys.get(i);
+            if (!allEventKeys.contains(eventKey)) allEventKeys.add(eventKey);
             if (kGraph.containsKey(eventKey)) {
                 ArrayList<Statement> directStatements = kGraph.get(eventKey);
                 for (int j = 0; j < directStatements.size(); j++) {
                     Statement statement = directStatements.get(j);
                     if (statement.getPredicate().getLocalName().equals("denotedBy")) {
                         String mention = statement.getObject().toString();
+                        String fileName = getFileNameFromMention(mention);
                         ArrayList<String> tokenList = getTokenIdsFromMention(mention);
                         for (int t = 0; t < tokenList.size(); t++) {
-                            String tokenId = tokenList.get(t);
+                            String tokenId = fileName+tokenList.get(t).substring(1);
                             tokenEventMap.put(tokenId, eventKey);
                         }
                     }

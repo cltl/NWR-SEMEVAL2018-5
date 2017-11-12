@@ -42,31 +42,16 @@ public class ConllAnswerFromSem {
      */
 
 
-    static public void main(String[] args) {
-        String inputfolder = "";
-        inputfolder = "/Code/vu/newsreader/NWR-SEMEVAL2018-5/examples/s3/CONLL/";
-        for (int i = 0; i < args.length; i++) {
-            String arg = args[i];
-            if (arg.equals("--folder") && args.length>(i+1)) {
-                inputfolder = args[i+1];
-            }
-        }
-        ArrayList<File> files = util.Util.makeRecursiveFileList(new File(inputfolder), ".conll");
-        for (int i = 0; i < files.size(); i++) {
-            File file = files.get(i);
-            System.out.println("file.getName() = " + file.getName());
-        }
-    }
-
-    static public void resultForCoNLLFile(File coNLLfile, HashMap<String,String> tokenEventMap) {
+    static public void resultForCoNLLFile(File resultFolder, File coNLLfile, ArrayList<String> allEventKeys, HashMap<String, String> tokenEventMap) {
         try {
             FileInputStream fis = new FileInputStream(coNLLfile);
             InputStreamReader isr = new InputStreamReader(fis);
             BufferedReader in = new BufferedReader(isr);
-            OutputStream fos = new FileOutputStream(coNLLfile+".result");
+            File resultFile = new File (resultFolder.getAbsolutePath()+"/"+coNLLfile.getName());
+            OutputStream fos = new FileOutputStream(resultFile);
             String inputLine = "";
-            String str = "";
             while (in.ready() && (inputLine = in.readLine()) != null) {
+                String str = "";
                 if (inputLine.startsWith("#begin document")) {
                     //#begin document (a212420b8d7c079bd385ff4dba9fea86);
                     str += inputLine+"\n";
@@ -90,15 +75,18 @@ public class ConllAnswerFromSem {
                             String tokenId = coNLLdata.getUniqueTokenString();
                             if (tokenEventMap.containsKey(tokenId)) {
                                 String eventId = tokenEventMap.get(tokenId);
-                                tag = Util.getNumericId(eventId);
+                                Integer intId = Util.getEventId(eventId, allEventKeys);
+                                //eventId = eventId.substring(eventId.lastIndexOf("/")+1);
+                                //tag = Util.getNumericId(eventId)+"\t"+intId;
+                                tag= intId.toString();
                             }
                             str += coNLLdata.toConll(tag);
                         }
                     }
                     else {}
                 }
+                fos.write(str.getBytes());
             }
-            fos.write(str.getBytes());
             fos.flush();
             fos.close();
             in.close();

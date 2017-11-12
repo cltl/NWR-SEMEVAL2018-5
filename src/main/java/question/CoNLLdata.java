@@ -158,7 +158,8 @@ public class CoNLLdata {
 
     public String getUniqueTokenString() {
 
-        String tokStr = getDunitInteger().toString();
+        String tokStr = this.fileName;
+        tokStr+= getDunitInteger().toString();
         if (this.sentence.length()==1) tokStr+="00";
         if (this.sentence.length()==2) tokStr+="0";
         tokStr+=this.sentence;
