@@ -2,18 +2,17 @@ package task5;
 
 import answer.ConllAnswerFromSem;
 import com.hp.hpl.jena.rdf.model.Statement;
+import match.EventIdentity;
+import match.TrigReader;
 import objects.EventTypes;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.json.simple.JSONObject;
 import question.Questiondata;
 import util.Util;
 import vu.cltl.storyteller.objects.TrigTripleData;
-import vu.cltl.storyteller.trig.TrigTripleReader;
 import vu.cltl.storyteller.trig.TrigUtil;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -27,26 +26,45 @@ public class Task5Trig {
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
     static public void main(String[] args) {
+        Integer tripleMatchThreshold = 1;
         String pathToQuestionFile = "/Users/piek/Desktop/SemEval2018/trial_data/input/s3/questions.json";
         String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data/nwr/data";
         String pathToConllFiles = "/Users/piek/Desktop/SemEval2018/trial_data/input/s3/CONLL";
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
+            if (arg.equals("--question") && args.length>(i+1)) {
+                pathToQuestionFile = args[i+1];
+            }
+            else if (arg.equals("--triple-threshold") && args.length>(i+1)) {
+                tripleMatchThreshold = Integer.parseInt(args[i+1]);
+            }
+            else if (arg.equals("--trig-files") && args.length>(i+1)) {
+                pathToTrigFiles = args[i+1];
+            }
+            else if (arg.equals("--conll-files") && args.length>(i+1)) {
+                pathToConllFiles = args[i+1];
+            }
+        }
+
         ArrayList<File> conllFiles = Util.makeRecursiveFileList(new File(pathToConllFiles), ".conll");
 
         /// process all trig files and build the knowledge graphs
         ArrayList<File> trigFiles = Util.makeRecursiveFileList(new File(pathToTrigFiles), ".trig");
-        TrigTripleData trigTripleData = TrigTripleReader.readTripleFromTrigFiles(trigFiles);
+        TrigTripleData trigTripleData = TrigReader.readTripleFromTrigFiles(trigFiles);
         ArrayList<String> domainEvents = EventTypes.getEventSubjectUris(trigTripleData.tripleMapInstances);
         HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         System.out.println("eckgMap = " + eckgMap.size());
         System.out.println("domainEvents = " + domainEvents.size());
-/*        try {
+        eckgMap = EventIdentity.lookForSimilarEvents(eckgMap, seckgMap,tripleMatchThreshold);
+        System.out.println("eckgMap after merge = " + eckgMap.size());
+        try {
             OutputStream fos = new FileOutputStream(pathToQuestionFile+".eckg");
             TrigUtil.printKnowledgeGraph(fos, eckgMap, seckgMap);
             fos.close();
         } catch (IOException e) {
             e.printStackTrace();
-        }*/
+        }
 
 
         //// process the question json
@@ -62,7 +80,8 @@ public class Task5Trig {
                 Object question = jsonObject.get(questionId);
                 Questiondata questiondata = new Questiondata(questionId, (JSONObject) question);
                 ArrayList<String> eventKeys = new ArrayList<>(); // for adding events that matter
-                Set keySet = seckgMap.keySet();
+                //// we use keySet from the eckgMap because events could have been merged.
+                Set keySet = eckgMap.keySet();
                 Iterator<String> keys = keySet.iterator();
                 while (keys.hasNext()) {
                     String eventKey = keys.next();
@@ -136,7 +155,7 @@ public class Task5Trig {
             /// process the CONLL files
             for (int i = 0; i < conllFiles.size(); i++) {
                 File conllFile =conllFiles.get(i);
-               // System.out.println("conllFile = " + conllFile);
+                System.out.println("conllFile = " + conllFile);
                 ConllAnswerFromSem.resultForCoNLLFile(conllResultFolder, conllFile, allEventKeys, tokenEventIdMap);
             }
 
