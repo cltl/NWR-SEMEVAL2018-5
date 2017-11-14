@@ -1,6 +1,5 @@
 package task5;
 
-import answer.ConllAnswerFromSem;
 import com.hp.hpl.jena.rdf.model.Statement;
 import match.EventIdentity;
 import match.TrigReader;
@@ -9,8 +8,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.json.simple.JSONObject;
 import question.Questiondata;
 import util.Util;
-import vu.cltl.storyteller.objects.TrigTripleData;
-import vu.cltl.storyteller.trig.TrigUtil;
+import vu.cltl.triple.TrigTripleData;
+import vu.cltl.triple.TrigUtil;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -26,7 +25,7 @@ public class Task5Trig {
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
     static public void main(String[] args) {
-        Integer tripleMatchThreshold = 1;
+        Integer tripleMatchThreshold = 5;
         String pathToQuestionFile = "/Users/piek/Desktop/SemEval2018/trial_data/input/s3/questions.json";
         String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data/nwr/data";
         String pathToConllFiles = "/Users/piek/Desktop/SemEval2018/trial_data/input/s3/CONLL";
@@ -50,17 +49,18 @@ public class Task5Trig {
 
         /// process all trig files and build the knowledge graphs
         ArrayList<File> trigFiles = Util.makeRecursiveFileList(new File(pathToTrigFiles), ".trig");
-        TrigTripleData trigTripleData = TrigReader.readTripleFromTrigFiles(trigFiles);
+        vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.readTripleFromTrigFiles(trigFiles);
         ArrayList<String> domainEvents = EventTypes.getEventSubjectUris(trigTripleData.tripleMapInstances);
         HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         System.out.println("eckgMap = " + eckgMap.size());
         System.out.println("domainEvents = " + domainEvents.size());
-        eckgMap = EventIdentity.lookForSimilarEvents(eckgMap, seckgMap,tripleMatchThreshold);
+        eckgMap = EventIdentity.lookForSimilarEvents(domainEvents, eckgMap, seckgMap,tripleMatchThreshold);
         System.out.println("eckgMap after merge = " + eckgMap.size());
         try {
             OutputStream fos = new FileOutputStream(pathToQuestionFile+".eckg");
-            TrigUtil.printKnowledgeGraph(fos, eckgMap, seckgMap);
+          //  TrigUtil.printKnowledgeGraph(fos, eckgMap, seckgMap);
+            TrigUtil.printKnowledgeGraph(fos, eckgMap);
             fos.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -156,7 +156,7 @@ public class Task5Trig {
             for (int i = 0; i < conllFiles.size(); i++) {
                 File conllFile =conllFiles.get(i);
                 System.out.println("conllFile = " + conllFile);
-                ConllAnswerFromSem.resultForCoNLLFile(conllResultFolder, conllFile, allEventKeys, tokenEventIdMap);
+              //  ConllAnswerFromSem.resultForCoNLLFile(conllResultFolder, conllFile, allEventKeys, tokenEventIdMap);
             }
 
         } catch (Exception e) {

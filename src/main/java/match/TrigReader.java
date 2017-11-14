@@ -2,11 +2,12 @@ package match;
 
 import com.hp.hpl.jena.query.Dataset;
 import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.tdb.TDBFactory;
 import org.apache.jena.riot.RDFDataMgr;
-import vu.cltl.storyteller.objects.TrigTripleData;
+import vu.cltl.triple.TrigTripleData;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -17,14 +18,16 @@ import java.util.Iterator;
  */
 public class TrigReader {
 
-    static public vu.cltl.storyteller.objects.TrigTripleData readTripleFromTrigFiles (ArrayList<File> trigFiles) {
+    static public TrigTripleData readTripleFromTrigFiles (ArrayList<File> trigFiles) {
+        Dataset ds = ds = TDBFactory.createDataset();
+        Model instanceModel =  ds.getNamedModel("instances");
         TrigTripleData trigTripleData = new TrigTripleData();
         Dataset dataset = TDBFactory.createDataset();
 
         for (int i = 0; i < trigFiles.size(); i++) {
             // if (i==200) break;
             File file = trigFiles.get(i);
-            String eventId = "";
+            Resource eventId = null;
             //System.out.println("file.getAbsolutePath() = " + file.getAbsolutePath());
             try {
                 dataset = RDFDataMgr.loadDataset(file.getAbsolutePath());
@@ -39,24 +42,25 @@ public class TrigReader {
                         StmtIterator siter = namedModel.listStatements();
                         while (siter.hasNext()) {
                             Statement s = siter.nextStatement();
-                            String subject = s.getSubject().getURI();
-                            if (subject.indexOf("#ev")>-1) {
+                            Resource subject = s.getSubject();
+                            if (subject.getURI().indexOf("#ev")>-1) {
                                 //// we lump all events from the same documents together
-                                if (eventId.isEmpty()) {
-                                    eventId = subject;
+                                if (eventId==null) {
+                                    eventId = s.getSubject();
                                 } else {
                                     subject = eventId;
                                 }
                             }
-                            if (trigTripleData.tripleMapInstances.containsKey(subject)) {
-                                ArrayList<Statement> triples = trigTripleData.tripleMapInstances.get(subject);
-                                triples.add(s);
-                                trigTripleData.tripleMapInstances.put(subject, triples);
-                            } else {
+                            Statement statement = instanceModel.createStatement(subject, s.getPredicate(), s.getObject());
 
+                            if (trigTripleData.tripleMapInstances.containsKey(subject.getURI())) {
+                                ArrayList<Statement> triples = trigTripleData.tripleMapInstances.get(subject.getURI());
+                                triples.add(statement);
+                                trigTripleData.tripleMapInstances.put(subject.getURI(), triples);
+                            } else {
                                 ArrayList<Statement> triples = new ArrayList<Statement>();
-                                triples.add(s);
-                                trigTripleData.tripleMapInstances.put(subject, triples);
+                                triples.add(statement);
+                                trigTripleData.tripleMapInstances.put(subject.getURI(), triples);
                             }
                         }
                     }
@@ -67,24 +71,24 @@ public class TrigReader {
                         StmtIterator siter = namedModel.listStatements();
                         while (siter.hasNext()) {
                             Statement s = siter.nextStatement();
-                            String subject = s.getSubject().getURI();
-                            if (subject.indexOf("#ev")>-1) {
+                            Resource subject = s.getSubject();
+                            if (subject.getURI().indexOf("#ev")>-1) {
                                 //// we lump all events from the same documents together
-                                if (eventId.isEmpty()) {
-                                    eventId = subject;
+                                if (eventId==null) {
+                                    eventId = s.getSubject();
                                 } else {
                                     subject = eventId;
                                 }
                             }
-                            if (trigTripleData.tripleMapOthers.containsKey(subject)) {
-                                ArrayList<Statement> triples = trigTripleData.tripleMapOthers.get(subject);
-                                triples.add(s);
-                                trigTripleData.tripleMapOthers.put(subject, triples);
+                            Statement statement = instanceModel.createStatement(subject, s.getPredicate(), s.getObject());
+                            if (trigTripleData.tripleMapOthers.containsKey(subject.getURI())) {
+                                ArrayList<Statement> triples = trigTripleData.tripleMapOthers.get(subject.getURI());
+                                triples.add(statement);
+                                trigTripleData.tripleMapOthers.put(subject.getURI(), triples);
                             } else {
-
                                 ArrayList<Statement> triples = new ArrayList<Statement>();
-                                triples.add(s);
-                                trigTripleData.tripleMapOthers.put(subject, triples);
+                                triples.add(statement);
+                                trigTripleData.tripleMapOthers.put(subject.getURI(), triples);
                             }
                         }
                     }

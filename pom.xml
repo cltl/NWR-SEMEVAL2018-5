@@ -70,7 +70,7 @@
 
         <dependency>
             <groupId>com.github.cltl</groupId>
-            <artifactId>nwr-knowledgestore-api</artifactId>
+            <artifactId>nwr-triple-api</artifactId>
             <version>1.0</version>
             <scope>compile</scope>
         </dependency>
@@ -78,16 +78,6 @@
             <groupId>com.googlecode.json-simple</groupId>
             <artifactId>json-simple</artifactId>
             <version>1.1.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.cltl</groupId>
-            <artifactId>EventCoreference</artifactId>
-            <version>v3.1.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.cltl</groupId>
-            <artifactId>StoryTeller</artifactId>
-            <version>v1.0</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.jackson</groupId>

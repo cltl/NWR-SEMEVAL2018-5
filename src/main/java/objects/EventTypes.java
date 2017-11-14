@@ -1,7 +1,7 @@
 package objects;
 
 import com.hp.hpl.jena.rdf.model.Statement;
-import vu.cltl.storyteller.trig.TrigUtil;
+import vu.cltl.triple.TrigUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,13 +14,39 @@ import java.util.Set;
 public class EventTypes {
 
     static final String[] types = {"eso:Attacking", "eso:BeingInExistence", "eso:Damaging", "eso:Destroying", "eso:Injuring",
-            "eso:Killing", "fn:Attack", "fn:Catastrophe", "fn:Cause_harm", "fn:Cause_impact", "fn:Cause_to_end", "fn:Contacting",
-            "fn:Death", "fn:Destroying", "fn:Existence", "fn:Experience_bodily_harm", "fn:Firing", "fn:Hit_target", "fn:Impact",
+            "eso:Killing", "fn:Attack", "fn:Catastrophe", "fn:Cause_harm", "fn:Cause_impact", "fn:Cause_to_end",
+            "fn:Death", "fn:Destroying", "fn:Existence", "fn:Experience_bodily_harm", "fn:Firing", "fn:Hit_target",
             "fn:Killing", "fn:Recovery", "fn:Resurrection", "fn:Shoot_projectiles", "fn:Use_firearm"};
+
+    static final String[] kills = {"eso:BeingInExistence",  "eso:Destroying",
+            "eso:Killing", "fn:Cause_to_end",
+            "fn:Death", "fn:Destroying", "fn:Existence",
+            "fn:Killing"};
+
+    static final String[] injuries = { "eso:Damaging", "eso:Injuring",
+             "fn:Cause_harm", "fn:Cause_impact",
+            "fn:Experience_bodily_harm", "fn:Hit_target",
+            "fn:Recovery", "fn:Resurrection"};
 
     public static boolean isType(String type) {
         for (int i = 0; i < types.length; i++) {
             String s = types[i];
+            if (s.equals(type)) return true;
+        }
+        return false;
+    }
+
+    public static boolean isKill(String type) {
+        for (int i = 0; i < kills.length; i++) {
+            String s = kills[i];
+            if (s.equals(type)) return true;
+        }
+        return false;
+    }
+
+    public static boolean isInjury(String type) {
+        for (int i = 0; i < injuries.length; i++) {
+            String s = injuries[i];
             if (s.equals(type)) return true;
         }
         return false;
