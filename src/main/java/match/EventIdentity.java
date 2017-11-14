@@ -1,6 +1,9 @@
 package match;
 
+import com.hp.hpl.jena.query.Dataset;
+import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.tdb.TDBFactory;
 import vu.cltl.triple.TrigUtil;
 
 import java.util.ArrayList;
@@ -16,11 +19,13 @@ public class EventIdentity {
             HashMap<String, ArrayList<Statement>> eckgMap,
             HashMap<String, ArrayList<Statement>> seckgMap,
             Integer tripleMatchThreshold) {
-
+        Dataset ds = ds = TDBFactory.createDataset();
+        Model instanceModel =  ds.getNamedModel("instances");
         HashMap<String, ArrayList<Statement>> mergedEvents = new HashMap<>();
         ArrayList<String> skipEvents = new ArrayList<>();
         for (int i = 0; i < domainEvents.size(); i++) {
             String key1 = domainEvents.get(i);
+            //boolean merge = false;
             if (!skipEvents.contains(key1)) {
                 ArrayList<Statement> directStatements1 = eckgMap.get(key1);
                 for (int j = i+1; j < domainEvents.size(); j++) {
@@ -30,6 +35,7 @@ public class EventIdentity {
                         ArrayList<Statement> matchingStatements = matchingStatements(directStatements1, directStatements2);
                         if (matchingStatements.size() >= tripleMatchThreshold) {
                             ////identify
+                            //merge = true;
                             System.out.println("matchingStatements.size() = " + matchingStatements.size());
                             for (int m = 0; m < matchingStatements.size(); m++) {
                                 Statement statement = matchingStatements.get(m);
@@ -37,15 +43,11 @@ public class EventIdentity {
                             }
                             skipEvents.add(key2);
                             System.out.println("skipEvents = " + skipEvents.size());
-                            TrigUtil.addNewStatements(directStatements1, directStatements2);
-                            System.out.println("directStatements1.size() = " + directStatements1.size());
-/*                            for (int d = 0; d < directStatements2.size(); d++) {
-                                Statement statement = directStatements2.get(d);
-                                if (statement.getPredicate().getLocalName().equals("denotedBy")) {
-                                    directStatements1.add(statement);
-                                  //  System.out.println("statement.toString() = " + statement.toString());
-                                }
-                            }*/
+                            for (int k = 0; k < directStatements2.size(); k++) {
+                                Statement statement2 = directStatements2.get(k);
+                                Statement statement = instanceModel.createStatement(directStatements1.get(0).getSubject(), statement2.getPredicate(), statement2.getObject());
+                                directStatements1.add(statement);
+                            }
                         }
                     }
 
@@ -144,9 +146,11 @@ public class EventIdentity {
                         ||*/
                 (statement.getPredicate().getLocalName().equals("hasPlace"))
                         ||
-                (statement.getPredicate().getLocalName().equals("A1"))
+                (statement.getPredicate().getLocalName().equals("A0"))
                         ||
-                (statement.getPredicate().getLocalName().equals("AM-LOC"))
+                (statement.getPredicate().getLocalName().equals("A1"))
+                /*        ||
+                (statement.getPredicate().getLocalName().equals("AM-LOC"))*/
          ) {
             if ((statement.getObject().toString().indexOf("/entities/")>-1) ||
                     (statement.getObject().toString().indexOf("//dbpedia.")>-1)) {

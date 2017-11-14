@@ -8,7 +8,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.json.simple.JSONObject;
 import question.Questiondata;
 import util.Util;
-import vu.cltl.triple.TrigTripleData;
 import vu.cltl.triple.TrigUtil;
 
 import java.io.*;
@@ -60,7 +59,8 @@ public class Task5Trig {
         try {
             OutputStream fos = new FileOutputStream(pathToQuestionFile+".eckg");
           //  TrigUtil.printKnowledgeGraph(fos, eckgMap, seckgMap);
-            TrigUtil.printKnowledgeGraph(fos, eckgMap);
+            //TrigUtil.printKnowledgeGraph(fos, eckgMap);
+            TrigUtil.printCountedKnowledgeGraph(fos, eckgMap);
             fos.close();
         } catch (IOException e) {
             e.printStackTrace();
