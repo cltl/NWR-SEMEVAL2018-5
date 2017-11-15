@@ -2,6 +2,7 @@ package task5;
 
 import com.hp.hpl.jena.rdf.model.Statement;
 import match.EventIdentity;
+import match.MatchSettings;
 import match.TrigReader;
 import objects.EventTypes;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -24,17 +25,17 @@ public class Task5Trig {
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
     static public void main(String[] args) {
-        Integer tripleMatchThreshold = 5;
         String pathToQuestionFile = "/Users/piek/Desktop/SemEval2018/trial_data/input/s3/questions.json";
         String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data/nwr/data";
         String pathToConllFiles = "/Users/piek/Desktop/SemEval2018/trial_data/input/s3/CONLL";
+        MatchSettings matchSettings = new MatchSettings();
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             if (arg.equals("--question") && args.length>(i+1)) {
                 pathToQuestionFile = args[i+1];
             }
             else if (arg.equals("--triple-threshold") && args.length>(i+1)) {
-                tripleMatchThreshold = Integer.parseInt(args[i+1]);
+                matchSettings.setTripleMatchThreshold(Integer.parseInt(args[i+1]));
             }
             else if (arg.equals("--trig-files") && args.length>(i+1)) {
                 pathToTrigFiles = args[i+1];
@@ -54,14 +55,15 @@ public class Task5Trig {
         HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         System.out.println("eckgMap = " + eckgMap.size());
         System.out.println("domainEvents = " + domainEvents.size());
-        eckgMap = EventIdentity.lookForSimilarEvents(domainEvents, eckgMap, seckgMap,tripleMatchThreshold);
+        eckgMap = EventIdentity.lookForSimilarEvents(domainEvents, eckgMap, seckgMap,matchSettings);
         System.out.println("eckgMap after merge = " + eckgMap.size());
         try {
-            OutputStream fos = new FileOutputStream(pathToQuestionFile+".eckg");
-          //  TrigUtil.printKnowledgeGraph(fos, eckgMap, seckgMap);
-            //TrigUtil.printKnowledgeGraph(fos, eckgMap);
-            TrigUtil.printCountedKnowledgeGraph(fos, eckgMap);
-            fos.close();
+            OutputStream fos1 = new FileOutputStream(pathToQuestionFile+".csv");
+            OutputStream fos2 = new FileOutputStream(pathToQuestionFile+".eckg");
+            TrigUtil.printCountedKnowledgeGraph(fos2, eckgMap);
+            TrigUtil.printCountedKnowledgeGraphCsv(fos1, eckgMap);
+            fos1.close();
+            fos2.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

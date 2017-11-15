@@ -18,7 +18,7 @@ public class EventIdentity {
     static public HashMap<String, ArrayList<Statement>> lookForSimilarEvents (ArrayList<String> domainEvents,
             HashMap<String, ArrayList<Statement>> eckgMap,
             HashMap<String, ArrayList<Statement>> seckgMap,
-            Integer tripleMatchThreshold) {
+            MatchSettings matchSettings) {
         Dataset ds = ds = TDBFactory.createDataset();
         Model instanceModel =  ds.getNamedModel("instances");
         HashMap<String, ArrayList<Statement>> mergedEvents = new HashMap<>();
@@ -33,10 +33,10 @@ public class EventIdentity {
                     if (!skipEvents.contains(key2)) {
                         ArrayList<Statement> directStatements2 = eckgMap.get(key2);
                         ArrayList<Statement> matchingStatements = matchingStatements(directStatements1, directStatements2);
-                        if (matchingStatements.size() >= tripleMatchThreshold) {
+                        if (matchingStatements.size() >= matchSettings.getTripleMatchThreshold()) {
                             ////identify
                             //merge = true;
-                            System.out.println("matchingStatements.size() = " + matchingStatements.size());
+                            //System.out.println("matchingStatements.size() = " + matchingStatements.size());
                             for (int m = 0; m < matchingStatements.size(); m++) {
                                 Statement statement = matchingStatements.get(m);
                                 System.out.println(statement.getPredicate().getLocalName()+":" + TrigUtil.getValue(statement.getObject().toString()));
@@ -62,7 +62,7 @@ public class EventIdentity {
     static public HashMap<String, ArrayList<Statement>> lookForSimilarEvents (
             HashMap<String, ArrayList<Statement>> eckgMap,
             HashMap<String, ArrayList<Statement>> seckgMap,
-            Integer tripleMatchThreshold) {
+            MatchSettings matchSettings) {
 
         HashMap<String, ArrayList<Statement>> mergedEvents = new HashMap<>();
         ArrayList<String> skipEvents = new ArrayList<>();
@@ -75,7 +75,7 @@ public class EventIdentity {
                     if (!key1.equals(key2) && !skipEvents.contains(key2)) {
                         ArrayList<Statement> directStatements2 = entry2.getValue();
                         ArrayList<Statement> matchingStatements = matchingStatements(directStatements1, directStatements2);
-                        if (matchingStatements.size() > tripleMatchThreshold) {
+                        if (matchingStatements.size() > matchSettings.getTripleMatchThreshold()) {
                             ////identify
                             System.out.println("matchingStatements.size() = " + matchingStatements.size());
                             for (int i = 0; i < matchingStatements.size(); i++) {
@@ -103,6 +103,21 @@ public class EventIdentity {
             }
         }
         return mergedEvents;
+    }
+
+    static boolean matchStatements (Statement stat1, Statement stat2, MatchSettings matchSettings) {
+        if (stat1.getObject().toString().equals(stat2.getObject().toString())) {
+            if (!matchSettings.matchSemPlace() && (stat1.getPredicate().getLocalName().equals("hasPlace"))) {
+                    return false;
+            }
+            else if (!matchSettings.matchDbpActor() && stat1.getObject().toString().indexOf("dbpedia")>-1) {
+                return false;
+            }
+            else {
+                return true;
+            }
+        }
+        return false;
     }
 
     static ArrayList<Statement> matchingStatements (ArrayList<Statement>statements1, ArrayList<Statement> statements2) {
@@ -141,19 +156,35 @@ public class EventIdentity {
     }
 
     static boolean entityParticipant (Statement statement) {
-        if (
-               /* (statement.getPredicate().getLocalName().equals("hasActor"))
-                        ||*/
-                (statement.getPredicate().getLocalName().equals("hasPlace"))
+        if ((statement.getPredicate().getLocalName().equals("A0"))
                         ||
+                (statement.getPredicate().getLocalName().equals("A1"))
+         ) {
+
+            if ((statement.getObject().toString().indexOf("/entities/")>-1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean dbpParticipant (Statement statement) {
+        if (
                 (statement.getPredicate().getLocalName().equals("A0"))
                         ||
                 (statement.getPredicate().getLocalName().equals("A1"))
-                /*        ||
-                (statement.getPredicate().getLocalName().equals("AM-LOC"))*/
          ) {
-            if ((statement.getObject().toString().indexOf("/entities/")>-1) ||
-                    (statement.getObject().toString().indexOf("//dbpedia.")>-1)) {
+            if ((statement.getObject().toString().indexOf("//dbpedia.")>-1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean dbpPlace (Statement statement) {
+        if ((statement.getPredicate().getLocalName().equals("hasPlace"))
+         ) {
+            if ((statement.getObject().toString().indexOf("//dbpedia.")>-1)) {
                 return true;
             }
         }

@@ -56,7 +56,8 @@ public class TrigReader {
                                 }
                             }
                             Statement statement = instanceModel.createStatement(subject, s.getPredicate(), s.getObject());
-                            if (TrigUtil.isGafTriple(statement) || EventTypes.eventTypeMatch(statement)) {
+                            //|| statement.getPredicate().getLocalName().equals("label")
+                            if (TrigUtil.isGafTriple(statement) || EventTypes.eventTypeMatch(statement) ) {
                                 if (trigTripleData.tripleMapInstances.containsKey(subject.getURI())) {
                                     ArrayList<Statement> triples = trigTripleData.tripleMapInstances.get(subject.getURI());
                                     triples.add(statement);
@@ -86,7 +87,7 @@ public class TrigReader {
                                 }
                             }
                             Statement statement = instanceModel.createStatement(subject, s.getPredicate(), s.getObject());
-                            if (EventIdentity.entityParticipant(statement)) {
+                            if (EventIdentity.entityParticipant(statement) || EventIdentity.dbpPlace(statement)) {
                                 if (trigTripleData.tripleMapOthers.containsKey(subject.getURI())) {
                                     ArrayList<Statement> triples = trigTripleData.tripleMapOthers.get(subject.getURI());
                                     triples.add(statement);
