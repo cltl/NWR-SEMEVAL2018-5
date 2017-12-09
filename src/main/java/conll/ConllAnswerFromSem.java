@@ -1,6 +1,5 @@
-package answer;
+package conll;
 
-import question.CoNLLdata;
 import util.Util;
 
 import java.io.*;
@@ -42,12 +41,72 @@ public class ConllAnswerFromSem {
      */
 
 
+
     static public void resultForCoNLLFile(File resultFolder, File coNLLfile, ArrayList<String> allEventKeys, HashMap<String, String> tokenEventMap) {
         try {
             FileInputStream fis = new FileInputStream(coNLLfile);
             InputStreamReader isr = new InputStreamReader(fis);
             BufferedReader in = new BufferedReader(isr);
             File resultFile = new File (resultFolder.getAbsolutePath()+"/"+coNLLfile.getName());
+            OutputStream fos = new FileOutputStream(resultFile);
+            String inputLine = "";
+            int tokenCounter = 0;
+            while (in.ready() && (inputLine = in.readLine()) != null) {
+                String str = "";
+                if (inputLine.startsWith("#begin document")) {
+                    tokenCounter = 0;
+                    //#begin document (a212420b8d7c079bd385ff4dba9fea86);
+                    str += inputLine+"\n";
+                }
+                else if (inputLine.startsWith("#end document")) {
+                    str += inputLine+"\n";
+                }
+                else {
+                    String[] fields = inputLine.split("\t");
+                    if (fields.length==4) {
+                        CoNLLdata coNLLdata = new CoNLLdata(inputLine);
+                        if (coNLLdata.getDunit().equals("DCT")) {
+                            //a212420b8d7c079bd385ff4dba9fea86.DCT	2017-01-14	DCT	-
+                            str += inputLine+"\n";
+                        }
+                        else if (coNLLdata.getWord().equals("NEWLINE")) {
+                            str += inputLine+"\n";
+                        }
+                        else {
+                            tokenCounter++;
+                            String tag = "-";
+                            String tokenId = "";
+                           // tokenId = coNLLdata.getUniqueTokenString();
+                            tokenId = "w"+tokenCounter;
+                            if (tokenEventMap.containsKey(tokenId)) {
+                                String eventId = tokenEventMap.get(tokenId);
+                                Integer intId = Util.getEventId(eventId, allEventKeys);
+                                //eventId = eventId.substring(eventId.lastIndexOf("/")+1);
+                                //tag = Util.getNumericId(eventId)+"\t"+intId;
+                                tag= "("+intId.toString()+")";
+                            }
+                            str += coNLLdata.toConll(tag);
+                        }
+                    }
+                    else {}
+                }
+                fos.write(str.getBytes());
+            }
+            fos.flush();
+            fos.close();
+            in.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    static public void resultForCoNLLFile(File coNLLfile, ArrayList<String> allEventKeys, HashMap<String, String> tokenEventMap) {
+        try {
+            FileInputStream fis = new FileInputStream(coNLLfile);
+            InputStreamReader isr = new InputStreamReader(fis);
+            BufferedReader in = new BufferedReader(isr);
+            File resultFile = new File (coNLLfile.getAbsolutePath()+".result");
             OutputStream fos = new FileOutputStream(resultFile);
             String inputLine = "";
             while (in.ready() && (inputLine = in.readLine()) != null) {
@@ -78,7 +137,7 @@ public class ConllAnswerFromSem {
                                 Integer intId = Util.getEventId(eventId, allEventKeys);
                                 //eventId = eventId.substring(eventId.lastIndexOf("/")+1);
                                 //tag = Util.getNumericId(eventId)+"\t"+intId;
-                                tag= intId.toString();
+                                tag= "("+intId.toString()+")";
                             }
                             str += coNLLdata.toConll(tag);
                         }

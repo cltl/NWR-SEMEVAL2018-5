@@ -1,4 +1,4 @@
-package question;
+package conll;
 
 import eu.kyotoproject.kaf.KafWordForm;
 import org.json.JSONException;
@@ -158,7 +158,7 @@ public class CoNLLdata {
 
     public String getUniqueTokenString() {
 
-        String tokStr = this.fileName;
+        String tokStr = replaceAlphaByNumeric(this.fileName);
         tokStr+= getDunitInteger().toString();
         if (this.sentence.length()==1) tokStr+="00";
         if (this.sentence.length()==2) tokStr+="0";
@@ -167,5 +167,22 @@ public class CoNLLdata {
         if (this.tokenId.length()==2) tokStr+="0";
         tokStr += this.tokenId;
         return tokStr;
+    }
+
+    String replaceAlphaByNumeric (String str) {
+        final String intString = "abcdefghijklmnopqrstuvwxyz";
+        String convertedString = "";
+        for (int i = 0; i < str.length(); i++) {
+           char c = str.charAt(i);
+           int p = intString.indexOf(c);
+           if (p==-1) {
+              // System.out.println("Error converting = " + str);
+               convertedString+= c;
+           }
+           else {
+               convertedString+=p+1;
+           }
+        }
+        return convertedString;
     }
 }

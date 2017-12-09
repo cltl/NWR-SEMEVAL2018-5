@@ -1,4 +1,4 @@
-package question;
+package conll;
 
 /**
  * Created by piek on 09/11/2017.
@@ -52,23 +52,35 @@ public class ConllNafConversion {
 
     static public void main(String[] args) {
         String inputfolder = "";
-        inputfolder = "/Users/piek/Desktop/SemEval2018/trial_data/input/s3/CONLL/";
+        String inputFile = "";
+        inputFile = "/Users/piek/Desktop/SemEval2018/trial_data_final/s3/docs.conll";
+        inputfolder = "";
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             if (arg.equals("--folder") && args.length>(i+1)) {
                 inputfolder = args[i+1];
             }
+            else if (arg.equals("--file") && args.length>(i+1)) {
+                inputFile = args[i+1];
+            }
         }
-        ArrayList<File> files = util.Util.makeRecursiveFileList(new File(inputfolder), ".conll");
-        for (int i = 0; i < files.size(); i++) {
-            File file = files.get(i);
-            System.out.println("file.getName() = " + file.getName());
-            test(new File(inputfolder), file);
+        if (inputFile.isEmpty() && !inputfolder.isEmpty()) {
+            ArrayList<File> files = util.Util.makeRecursiveFileList(new File(inputfolder), ".conll");
+            for (int i = 0; i < files.size(); i++) {
+                File file = files.get(i);
+                //System.out.println("file.getName() = " + file.getName());
+                readConll(new File(inputfolder), file);
+            }
+        }
+        else if (!inputFile.isEmpty()) {
+            File conllFile = new File(inputFile);
+            File parentFolder = conllFile.getParentFile();
+            readCoNLLFile(parentFolder, conllFile);
         }
     }
 
 
-    static void test(File parentFolder, File conllfile) {
+    static void readConll(File parentFolder, File conllfile) {
         readCoNLLFile(parentFolder, conllfile);
     }
 
@@ -138,7 +150,8 @@ e54a480756b852ed2f0596e130652b64.b20.21	NEWLINE	BODY	-
                             //e54a480756b852ed2f0596e130652b64.b20.20	.	BODY	-
                            // int n = kafSaxParser.getKafWordFormList().size()+1;
                            // Integer numericId = Integer.parseInt(Util.getNumericId(inputLine));
-                            KafWordForm kafWordForm = coNLLdata.toKafWordForm();
+                            KafWordForm kafWordForm = coNLLdata.toKafWordForm(kafSaxParser.kafWordFormList.size()+1);
+                            //KafWordForm kafWordForm = coNLLdata.toKafWordForm();
                             kafWordForm.setCharOffset(Integer.toString(rawText.length()));
                             kafWordForm.setCharLength(Integer.toString(coNLLdata.getWord().length()));
                             rawText += " " + coNLLdata.getWord();

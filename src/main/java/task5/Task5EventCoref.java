@@ -1,17 +1,20 @@
 package task5;
 
+import conll.ConllAnswerFromSem;
 import com.hp.hpl.jena.rdf.model.Statement;
 import match.EventIdentity;
 import match.MatchSettings;
 import match.TrigReader;
 import objects.EventTypes;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.json.simple.JSONObject;
 import question.Questiondata;
 import util.Util;
 import vu.cltl.triple.TrigUtil;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -19,47 +22,56 @@ import java.util.Set;
 
 /**
  * Created by piek on 10/11/2017.
+ * New version that assumes there is no specific set of documents associated with each query in the json file.
+ * This means that all documents associated with the CoNLL file needs to be considered for event detection and cross-document event coreference.
+ * We therefore separated the event coreference from answering the questions. The event coreference considers all the documents and all events within the documents
+ * This function only carries out cross-document from the NWR output and create the event-centric knowledge graphs.
+ * It stores the ECKG to disk and annotates the CoNLL file with event mentions and coreference relations.
+ * We are now dealing with one big CoNLL file instead of many separate files.
  */
-public class Task5Trig {
+public class Task5EventCoref {
 
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
     static public void main(String[] args) {
-        String pathToQuestionFile = "/Users/piek/Desktop/SemEval2018/trial_data/input/s3/questions.json";
-        String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data/nwr/data";
-        String pathToConllFiles = "/Users/piek/Desktop/SemEval2018/trial_data/input/s3/CONLL";
+        String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data_final/nwr/data";
+        String pathToConllFile = "/Users/piek/Desktop/SemEval2018/trial_data_final/s3/docs.conll";
         MatchSettings matchSettings = new MatchSettings();
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
-            if (arg.equals("--question") && args.length>(i+1)) {
-                pathToQuestionFile = args[i+1];
-            }
-            else if (arg.equals("--triple-threshold") && args.length>(i+1)) {
+            if (arg.equals("--triple-threshold") && args.length>(i+1)) {
                 matchSettings.setTripleMatchThreshold(Integer.parseInt(args[i+1]));
             }
             else if (arg.equals("--trig-files") && args.length>(i+1)) {
                 pathToTrigFiles = args[i+1];
             }
-            else if (arg.equals("--conll-files") && args.length>(i+1)) {
-                pathToConllFiles = args[i+1];
+            else if (arg.equals("--conll-file") && args.length>(i+1)) {
+                pathToConllFile = args[i+1];
             }
         }
 
-        ArrayList<File> conllFiles = Util.makeRecursiveFileList(new File(pathToConllFiles), ".conll");
-
+        /// STEP 1
         /// process all trig files and build the knowledge graphs
         ArrayList<File> trigFiles = Util.makeRecursiveFileList(new File(pathToTrigFiles), ".trig");
         vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.readTripleFromTrigFiles(trigFiles);
+
+        /// STEP 2
+        /// from the complete graph we extract all events that match the domain constraints
         ArrayList<String> domainEvents = EventTypes.getEventSubjectUris(trigTripleData.tripleMapInstances);
         HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         System.out.println("eckgMap = " + eckgMap.size());
         System.out.println("domainEvents = " + domainEvents.size());
+
+        /// STEP 3
+        /// This will carry out cross-document event coreference for all events that belong to the same domain
         eckgMap = EventIdentity.lookForSimilarEvents(domainEvents, eckgMap, seckgMap,matchSettings);
         System.out.println("eckgMap after merge = " + eckgMap.size());
+        //// Dump the ECKGs
         try {
-            OutputStream fos1 = new FileOutputStream(pathToQuestionFile+".csv");
-            OutputStream fos2 = new FileOutputStream(pathToQuestionFile+".eckg");
+            File parentFolder = new File(pathToTrigFiles).getParentFile();
+            OutputStream fos1 = new FileOutputStream(parentFolder.getAbsoluteFile()+"/"+"result.csv");
+            OutputStream fos2 = new FileOutputStream(parentFolder.getAbsoluteFile()+"/"+"result.eckg");
             TrigUtil.printCountedKnowledgeGraph(fos2, eckgMap);
             TrigUtil.printCountedKnowledgeGraphCsv(fos1, eckgMap);
             fos1.close();
@@ -68,102 +80,22 @@ public class Task5Trig {
             e.printStackTrace();
         }
 
-
-        //// process the question json
-        //// match each question constraint with the KG and create json answer and the conll output files for event coreference
-        try {
-            HashMap<String, String> tokenEventIdMap = new HashMap<>();
-            JSONObject jsonObject = Util.readJsonFile(pathToQuestionFile);
-            JSONObject answerObjectArray = new JSONObject();
-            /// iterate over json array with the questions
-            for (Object key : jsonObject.keySet()) {
-                String questionId = (String) key;
-               // System.out.println("questionId = " + questionId);
-                Object question = jsonObject.get(questionId);
-                Questiondata questiondata = new Questiondata(questionId, (JSONObject) question);
-                ArrayList<String> eventKeys = new ArrayList<>(); // for adding events that matter
-                //// we use keySet from the eckgMap because events could have been merged.
-                Set keySet = eckgMap.keySet();
-                Iterator<String> keys = keySet.iterator();
-                while (keys.hasNext()) {
-                    String eventKey = keys.next();
-                    ArrayList<Statement> secondaryStatements = seckgMap.get(eventKey);
-                    if (matchTimeConstraint(secondaryStatements, questiondata)) {
+        //// At this point we created event instance representations
+        //// Now we write these to the CoNLL file
+        //// Maps each token to the right eventId
+        HashMap<String, String> tokenEventIdMap = new HashMap<>();
+        getTokenEventMap(tokenEventIdMap, eckgMap);
+        /*
+                            if (matchTimeConstraint(secondaryStatements, questiondata)) {
                         if (!eventKeys.contains(eventKey)) eventKeys.add(eventKey);
                     }
-                }
+         */
 
-                //// add event tokenids to augment the CoNLL files with mentions
-                getTokenEventMap(tokenEventIdMap, eventKeys, eckgMap);
+        File conllFile = new File (pathToConllFile);
+        File conllResultFolder = conllFile.getParentFile();
+        if (!conllResultFolder.exists()) conllResultFolder.mkdir();
+        ConllAnswerFromSem.resultForCoNLLFile(conllFile, allEventKeys, tokenEventIdMap);
 
-
-                JSONObject answerObject = new JSONObject();
-                answerObject.put("numerical_anwer", eventKeys.size());
-                JSONObject docObject = new JSONObject();
-                for (int i = 0; i < eventKeys.size(); i++) {
-                    String eventKey = eventKeys.get(i);
-                    Integer intId = Util.getEventId(eventKey, allEventKeys);
-                    ArrayList<Statement> directStatements = eckgMap.get(eventKey);
-                    ArrayList<String> fileNames = getFilesFromStatements(directStatements);
-                    docObject.put(intId.toString(), fileNames);
-                }
-                answerObject.put ("answer_docs",docObject);
-                answerObjectArray.put(questionId, answerObject);
-
-                /**
-                 *
-                 *
-                 "3-59876" : {
-                 "answer_docs" : {
-                 "3" : [ "4f7fc8d1692d6bb2f5e450a23e90a034" ],
-                 "4" : [ "4f7fc8d1692d6bb2f5e450a23e90a034" ],
-                 "5" : [ "4f7fc8d1692d6bb2f5e450a23e90a034" ]
-                 },
-                 "numerical_anwer" : 3
-                 },
-                 *
-
-                 "3-58117": {
-                 "answer_docs": {
-                 "750833": [
-                 "f2b694085da3d4c7a47b9daf84203fc2"
-                 ]
-                 },
-                 "numerical_answer": 2,
-                 "part_info": {
-                 "750833": {
-                 "num_injured": 0,
-                 "num_killed": 2
-                 }
-                 }
-                 },
-                 */
-            }
-            try (FileWriter file = new FileWriter(pathToQuestionFile+".answer.json")) {
-                ObjectMapper mapper = new ObjectMapper();
-                file.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(answerObjectArray));
-                file.flush();
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-
-            System.out.println("tokenEventIdMap = " + tokenEventIdMap.size());
-            File conllFolder = new File (pathToConllFiles);
-            File conllParentFile = conllFolder.getParentFile();
-            File conllResultFolder = new File(conllParentFile.getAbsolutePath()+"/"+conllFolder.getName()+"RESULT");
-            if (!conllResultFolder.exists()) conllResultFolder.mkdir();
-            /// process the CONLL files
-            for (int i = 0; i < conllFiles.size(); i++) {
-                File conllFile =conllFiles.get(i);
-                System.out.println("conllFile = " + conllFile);
-              //  ConllAnswerFromSem.resultForCoNLLFile(conllResultFolder, conllFile, allEventKeys, tokenEventIdMap);
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
 
@@ -226,6 +158,28 @@ public class Task5Trig {
                             String tokenId = fileName+tokenList.get(t).substring(1);
                             tokenEventMap.put(tokenId, eventKey);
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    static  void getTokenEventMap (HashMap<String, String> tokenEventMap, HashMap<String, ArrayList<Statement>> kGraph) {
+        Set keySet = kGraph.keySet();
+        Iterator<String> keys = keySet.iterator();
+        while (keys.hasNext()) {
+            String eventKey = keys.next();
+            if (!allEventKeys.contains(eventKey)) allEventKeys.add(eventKey);
+            ArrayList<Statement> directStatements = kGraph.get(eventKey);
+            for (int j = 0; j < directStatements.size(); j++) {
+                Statement statement = directStatements.get(j);
+                if (statement.getPredicate().getLocalName().equals("denotedBy")) {
+                    String mention = statement.getObject().toString();
+                    String fileName = getFileNameFromMention(mention);
+                    ArrayList<String> tokenList = getTokenIdsFromMention(mention);
+                    for (int t = 0; t < tokenList.size(); t++) {
+                        String tokenId = fileName+tokenList.get(t).substring(1);
+                        tokenEventMap.put(tokenId, eventKey);
                     }
                 }
             }

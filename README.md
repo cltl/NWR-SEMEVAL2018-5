@@ -1,4 +1,4 @@
-# NWR-SEMEVAL2018-5
+# NWR-SEMEVAL2018-T5
 NewsReader participation to task 5 of SemEval2018
 
 Our goal is to build a wrapper around the NewsReader system to participate in the task.
@@ -23,4 +23,19 @@ Different version of the system will:
 
 1. improve the NLP components for event detection
 2. improve the reasoning over the output of the SPARQL requests
+
+
+Overall strategy version 1
+
+Preprocessing
+- Read conll and generate NAF files with tokens
+- NWR pipeline for final NAF and naf2sem for RDF TRiG
+
+Question processing:
+- Read all RDF TRiG files
+- Select events of the correct type
+- merge events with sharing object
+Read question file
+
+
 
