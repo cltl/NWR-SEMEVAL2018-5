@@ -88,6 +88,7 @@ public class TrigReader {
                             }
                             Statement statement = instanceModel.createStatement(subject, s.getPredicate(), s.getObject());
                             if (EventIdentity.entityParticipant(statement) || EventIdentity.dbpPlace(statement)) {
+                                System.out.println("statement.toString() = " + statement.toString());
                                 if (trigTripleData.tripleMapOthers.containsKey(subject.getURI())) {
                                     ArrayList<Statement> triples = trigTripleData.tripleMapOthers.get(subject.getURI());
                                     triples.add(statement);

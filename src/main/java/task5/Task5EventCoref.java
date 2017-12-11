@@ -1,10 +1,10 @@
 package task5;
 
-import conll.ConllAnswerFromSem;
 import com.hp.hpl.jena.rdf.model.Statement;
+import conll.ConllAnswerFromSem;
 import match.EventIdentity;
 import match.MatchSettings;
-import match.TrigReader;
+import match.TemporalReasoning;
 import objects.EventTypes;
 import org.json.simple.JSONObject;
 import question.Questiondata;
@@ -34,7 +34,7 @@ public class Task5EventCoref {
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
     static public void main(String[] args) {
-        String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data_final/nwr/data";
+        String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data_final/naf/";
         String pathToConllFile = "/Users/piek/Desktop/SemEval2018/trial_data_final/s3/docs.conll";
         MatchSettings matchSettings = new MatchSettings();
         for (int i = 0; i < args.length; i++) {
@@ -49,11 +49,13 @@ public class Task5EventCoref {
                 pathToConllFile = args[i+1];
             }
         }
-
+        File conllFileFolder = new File (pathToConllFile).getParentFile();
+        File trigFolder = new File (pathToTrigFiles);
         /// STEP 1
         /// process all trig files and build the knowledge graphs
-        ArrayList<File> trigFiles = Util.makeRecursiveFileList(new File(pathToTrigFiles), ".trig");
-        vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.readTripleFromTrigFiles(trigFiles);
+        ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".trig");
+       // vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.readTripleFromTrigFiles(trigFiles);
+        vu.cltl.triple.TrigTripleData trigTripleData = vu.cltl.triple.TrigTripleReader.readTripleFromTrigFiles(trigFiles);
 
         /// STEP 2
         /// from the complete graph we extract all events that match the domain constraints
@@ -61,43 +63,63 @@ public class Task5EventCoref {
         HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         System.out.println("eckgMap = " + eckgMap.size());
+        System.out.println("seckgMap = " + seckgMap.size());
         System.out.println("domainEvents = " + domainEvents.size());
 
-        /// STEP 3
-        /// This will carry out cross-document event coreference for all events that belong to the same domain
-        eckgMap = EventIdentity.lookForSimilarEvents(domainEvents, eckgMap, seckgMap,matchSettings);
-        System.out.println("eckgMap after merge = " + eckgMap.size());
-        //// Dump the ECKGs
-        try {
-            File parentFolder = new File(pathToTrigFiles).getParentFile();
-            OutputStream fos1 = new FileOutputStream(parentFolder.getAbsoluteFile()+"/"+"result.csv");
-            OutputStream fos2 = new FileOutputStream(parentFolder.getAbsoluteFile()+"/"+"result.eckg");
-            TrigUtil.printCountedKnowledgeGraph(fos2, eckgMap);
-            TrigUtil.printCountedKnowledgeGraphCsv(fos1, eckgMap);
-            fos1.close();
-            fos2.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+
+        /// STEP 3 DEFINE TEMPORAL AND SPATIAL CONTAINERS
+
+        HashMap<String, ArrayList<String>> temporalContainers = TemporalReasoning.getTemporalContainers(eckgMap, seckgMap);
+
+
+        /// STEP 4 CROSSDOC EVENT COREF WITHIN CONTAINERS
+          /// This will carry out cross-document event coreference for all events that belong to the same domain
+        Set containerSet = temporalContainers.keySet();
+        Iterator<String> containerKeys = containerSet.iterator();
+        while (containerKeys.hasNext()) {
+            String containerKey = containerKeys.next();
+            ArrayList<String> eventIds = temporalContainers.get(containerKey);
+            HashMap<String, ArrayList<Statement>> containerEvents = EventIdentity.lookForSimilarEvents(
+                    eventIds,
+                               eckgMap,
+                               seckgMap,
+                               matchSettings);
+            System.out.println("eckgMap after merge = " + eckgMap.size());
+                       //// Dump the ECKGs
+           try {
+               OutputStream fos1 = new FileOutputStream(conllFileFolder.getAbsoluteFile()+"/"+containerKey+".csv");
+               OutputStream fos2 = new FileOutputStream(conllFileFolder.getAbsoluteFile()+"/"+containerKey+".eckg");
+               TrigUtil.printCountedKnowledgeGraph(fos2, containerEvents);
+               TrigUtil.printCountedKnowledgeGraphCsv(fos1, containerEvents);
+               fos1.close();
+               fos2.close();
+           } catch (IOException e) {
+               e.printStackTrace();
+           }
         }
-
-        //// At this point we created event instance representations
-        //// Now we write these to the CoNLL file
-        //// Maps each token to the right eventId
-        HashMap<String, String> tokenEventIdMap = new HashMap<>();
-        getTokenEventMap(tokenEventIdMap, eckgMap);
-        /*
-                            if (matchTimeConstraint(secondaryStatements, questiondata)) {
-                        if (!eventKeys.contains(eventKey)) eventKeys.add(eventKey);
-                    }
-         */
-
-        File conllFile = new File (pathToConllFile);
-        File conllResultFolder = conllFile.getParentFile();
-        if (!conllResultFolder.exists()) conllResultFolder.mkdir();
-        ConllAnswerFromSem.resultForCoNLLFile(conllFile, allEventKeys, tokenEventIdMap);
+        /// STEP 5 CREATE THE CONLL FILE
 
     }
 
+
+     static void createSystemConllFile (HashMap<String, String> tokenEventIdMap,
+                        HashMap<String, ArrayList<Statement>> eckgMap,
+                        String pathToConllFile
+                        ) {
+
+           getTokenEventMap(tokenEventIdMap, eckgMap);
+           /*
+                               if (matchTimeConstraint(secondaryStatements, questiondata)) {
+                           if (!eventKeys.contains(eventKey)) eventKeys.add(eventKey);
+                       }
+            */
+
+           File conllFile = new File (pathToConllFile);
+           File conllResultFolder = conllFile.getParentFile();
+           if (!conllResultFolder.exists()) conllResultFolder.mkdir();
+           ConllAnswerFromSem.resultForCoNLLFile(conllFile, allEventKeys, tokenEventIdMap);
+
+     }
 
     //<http://..../02e278ddb2d52a796d111d5a1258b0ee#char=20,25&word=w3&term=t3&sentence=1&paragraph=1>
     // gaf:denotedBy
