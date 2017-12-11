@@ -26,7 +26,8 @@ public class TemporalReasoning {
                ArrayList<Statement> secondaryStatements = seckgMap.get(eventKey);
                ArrayList<Time> dominantDates = getDominantTimeStrings(secondaryStatements);
                if (dominantDates.size()>0) {
-                   timeString = dominantDates.get(0).toYearMonthString();
+                   //timeString = dominantDates.get(0).toYearMonthString();
+                   timeString = dominantDates.get(0).toYearMonthDayString();
                }
            }
            if (timeString.isEmpty()) {
@@ -35,7 +36,13 @@ public class TemporalReasoning {
            if (map.containsKey(timeString)) {
                ArrayList<String> events = map.get(timeString);
                events.add(eventKey);
-            }
+               map.put(timeString, events);
+           }
+           else {
+               ArrayList<String> events = new ArrayList<>();
+               events.add(eventKey);
+               map.put(timeString, events);
+           }
         }
         return map;
     }
@@ -119,8 +126,8 @@ public class TemporalReasoning {
                     /// we have a problem
                 }
                 if (time.getYear() != 0) {
-                    timeArrayList.add(time);
                     if (time.getYear() >= minYear && time.getYear() <= maxYear) {
+                        timeArrayList.add(time);
                         if (years.containsKey(time.getYear())) {
                             Integer cnt = years.get(time.getYear());
                             cnt++;

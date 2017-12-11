@@ -34,7 +34,7 @@ public class Task5EventCoref {
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
     static public void main(String[] args) {
-        String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data_final/naf/";
+        String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data_final/naf-out";
         String pathToConllFile = "/Users/piek/Desktop/SemEval2018/trial_data_final/s3/docs.conll";
         MatchSettings matchSettings = new MatchSettings();
         for (int i = 0; i < args.length; i++) {
@@ -49,7 +49,12 @@ public class Task5EventCoref {
                 pathToConllFile = args[i+1];
             }
         }
+        matchSettings.parseArguments(args);
+        matchSettings.alltrue();
+       // matchSettings.setMatchAny(true);
         File conllFileFolder = new File (pathToConllFile).getParentFile();
+        File eckgFolder = new File (conllFileFolder.getAbsolutePath()+"/"+"eckg");
+        if (!eckgFolder.exists()) eckgFolder.mkdir();
         File trigFolder = new File (pathToTrigFiles);
         /// STEP 1
         /// process all trig files and build the knowledge graphs
@@ -74,21 +79,28 @@ public class Task5EventCoref {
 
         /// STEP 4 CROSSDOC EVENT COREF WITHIN CONTAINERS
           /// This will carry out cross-document event coreference for all events that belong to the same domain
+        System.out.println("temporalContainers.size() = " + temporalContainers.size());
         Set containerSet = temporalContainers.keySet();
         Iterator<String> containerKeys = containerSet.iterator();
         while (containerKeys.hasNext()) {
             String containerKey = containerKeys.next();
+            System.out.print("containerKey = " + containerKey+":");
             ArrayList<String> eventIds = temporalContainers.get(containerKey);
             HashMap<String, ArrayList<Statement>> containerEvents = EventIdentity.lookForSimilarEvents(
-                    eventIds,
-                               eckgMap,
-                               seckgMap,
-                               matchSettings);
-            System.out.println("eckgMap after merge = " + eckgMap.size());
+                                eventIds,
+                                eckgMap,
+                                seckgMap,
+                                matchSettings);
+            if (eventIds.size()==containerEvents.size()) {
+                System.out.println("NO MERGE");
+            }
+            else {
+                System.out.println("MERGED = " + (eventIds.size()-containerEvents.size()));
+            }
                        //// Dump the ECKGs
            try {
-               OutputStream fos1 = new FileOutputStream(conllFileFolder.getAbsoluteFile()+"/"+containerKey+".csv");
-               OutputStream fos2 = new FileOutputStream(conllFileFolder.getAbsoluteFile()+"/"+containerKey+".eckg");
+               OutputStream fos1 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".csv");
+               OutputStream fos2 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".eckg");
                TrigUtil.printCountedKnowledgeGraph(fos2, containerEvents);
                TrigUtil.printCountedKnowledgeGraphCsv(fos1, containerEvents);
                fos1.close();

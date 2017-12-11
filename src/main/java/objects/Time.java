@@ -37,7 +37,31 @@ public class Time {
 
     public String toYearMonthString () {
         String str = "";
-        str += year.toString()+month.toString();
+        str += year.toString();
+        if (month<10) {
+            str += "0"+month.toString();
+        }
+        else {
+            str += month.toString();
+        }
+        return str;
+    }
+
+    public String toYearMonthDayString () {
+        String str = "";
+        str += year.toString();
+        if (month<10) {
+            str += "0"+month.toString();
+        }
+        else {
+            str += month.toString();
+        }
+        if (day<10) {
+            str += "0"+day.toString();
+        }
+        else {
+            str += day.toString();
+        }
         return str;
     }
 }

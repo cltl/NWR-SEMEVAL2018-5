@@ -32,102 +32,49 @@ public class EventIdentity {
                     String key2 = domainEvents.get(j);
                     if (!skipEvents.contains(key2)) {
                         ArrayList<Statement> directStatements2 = eckgMap.get(key2);
-                        ArrayList<Statement> matchingStatements = matchingStatements(directStatements1, directStatements2);
-                        if (matchingStatements.size() >= matchSettings.getTripleMatchThreshold()) {
+                        ArrayList<Statement> matchingStatements = matchingStatements(directStatements1, directStatements2, matchSettings);
+                        ArrayList<Statement> matchingPrefStatements = matchingStatementsByPrefLabel(seckgMap, directStatements1, directStatements2, matchSettings);
+                        int matches = 0;
+                        matches += matchingStatements.size();
+                        matches += matchingPrefStatements.size();
+                        if (matches >= matchSettings.getTripleMatchThreshold()
+                                ) {
                             ////identify
                             //merge = true;
                             //System.out.println("matchingStatements.size() = " + matchingStatements.size());
                             for (int m = 0; m < matchingStatements.size(); m++) {
                                 Statement statement = matchingStatements.get(m);
-                                System.out.println(statement.getPredicate().getLocalName()+":" + TrigUtil.getValue(statement.getObject().toString()));
+                               // System.out.println(statement.getPredicate().getLocalName()+":" + TrigUtil.getValue(statement.getObject().toString()));
                             }
                             skipEvents.add(key2);
-                            System.out.println("skipEvents = " + skipEvents.size());
+                            //System.out.println("skipEvents = " + skipEvents.size());
                             for (int k = 0; k < directStatements2.size(); k++) {
                                 Statement statement2 = directStatements2.get(k);
                                 Statement statement = instanceModel.createStatement(directStatements1.get(0).getSubject(), statement2.getPredicate(), statement2.getObject());
                                 directStatements1.add(statement);
                             }
                         }
+
                     }
 
                 }
                 mergedEvents.put(key1, directStatements1);
-                System.out.println("mergedEvents = " + mergedEvents.size());
+               // System.out.println("mergedEvents = " + mergedEvents.size());
             }
         }
         return mergedEvents;
     }
 
-    static public HashMap<String, ArrayList<Statement>> lookForSimilarEvents (
-            HashMap<String, ArrayList<Statement>> eckgMap,
-            HashMap<String, ArrayList<Statement>> seckgMap,
-            MatchSettings matchSettings) {
 
-        HashMap<String, ArrayList<Statement>> mergedEvents = new HashMap<>();
-        ArrayList<String> skipEvents = new ArrayList<>();
-        for (HashMap.Entry<String, ArrayList<Statement>> entry : eckgMap.entrySet()) {
-            String key1 = entry.getKey();
-            if (!skipEvents.contains(key1)) {
-                ArrayList<Statement> directStatements1 = entry.getValue();
-                for (HashMap.Entry<String, ArrayList<Statement>> entry2 : eckgMap.entrySet()) {
-                    String key2 = entry2.getKey();
-                    if (!key1.equals(key2) && !skipEvents.contains(key2)) {
-                        ArrayList<Statement> directStatements2 = entry2.getValue();
-                        ArrayList<Statement> matchingStatements = matchingStatements(directStatements1, directStatements2);
-                        if (matchingStatements.size() > matchSettings.getTripleMatchThreshold()) {
-                            ////identify
-                            System.out.println("matchingStatements.size() = " + matchingStatements.size());
-                            for (int i = 0; i < matchingStatements.size(); i++) {
-                                Statement statement = matchingStatements.get(i);
-                                System.out.println(statement.getPredicate().getLocalName()+":" + TrigUtil.getValue(statement.getObject().toString()));
-                            }
-                            skipEvents.add(key2);
-                            System.out.println("skipEvents = " + skipEvents.size());
-                            ArrayList<Statement> newStatements = getNewStatements(directStatements1, directStatements2);
-                            directStatements1.addAll(newStatements);
-                            System.out.println("directStatements1.size() = " + directStatements1.size());
-                            /*for (int i = 0; i < directStatements2.size(); i++) {
-                                Statement statement = directStatements2.get(i);
-                                if (statement.getPredicate().getLocalName().equals("denotedBy")) {
-                                    directStatements1.add(statement);
-                                    System.out.println("statement.toString() = " + statement.toString());
-                                }
-                            }*/
-                        }
-                    }
 
-                }
-                mergedEvents.put(key1, directStatements1);
-                System.out.println("mergedEvents = " + mergedEvents.size());
-            }
-        }
-        return mergedEvents;
-    }
-
-    static boolean matchStatements (Statement stat1, Statement stat2, MatchSettings matchSettings) {
-        if (stat1.getObject().toString().equals(stat2.getObject().toString())) {
-            if (!matchSettings.matchSemPlace() && (stat1.getPredicate().getLocalName().equals("hasPlace"))) {
-                    return false;
-            }
-            else if (!matchSettings.matchDbpActor() && stat1.getObject().toString().indexOf("dbpedia")>-1) {
-                return false;
-            }
-            else {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    static ArrayList<Statement> matchingStatements (ArrayList<Statement>statements1, ArrayList<Statement> statements2) {
+    static ArrayList<Statement> matchingStatements (ArrayList<Statement>statements1, ArrayList<Statement> statements2, MatchSettings matchSettings) {
         ArrayList<Statement> matchingStatements = new ArrayList<>();
         for (int i = 0; i < statements1.size(); i++) {
             Statement statement1 = statements1.get(i);
-            if (entityParticipant(statement1)) {
+            if (identityStatement(statement1, matchSettings)) {
                 for (int j = 0; j < statements2.size(); j++) {
                     Statement statement2 = statements2.get(j);
-                    if (entityParticipant(statement2)) {
+                    if (identityStatement(statement2, matchSettings)) {
                         if (statement1.getObject().toString().equals(statement2.getObject().toString())) {
                             TrigUtil.addNewStatement(matchingStatements, statement1);
                         }
@@ -138,6 +85,55 @@ public class EventIdentity {
         return matchingStatements;
     }
 
+    static ArrayList<Statement> matchingStatementsByPrefLabel (HashMap<String, ArrayList<Statement>> seckgMap,
+                                                    ArrayList<Statement>statements1,
+                                                    ArrayList<Statement> statements2,
+                                                               MatchSettings matchSettings) {
+        ArrayList<Statement> matchingStatements = new ArrayList<>();
+        for (int i = 0; i < statements1.size(); i++) {
+            Statement statement1 = statements1.get(i);
+            if (identityStatement(statement1, matchSettings)) {
+                for (int j = 0; j < statements2.size(); j++) {
+                    Statement statement2 = statements2.get(j);
+                    if (identityStatement(statement2, matchSettings)) {
+                        if (matchPreferredLabel(seckgMap, statement1.getSubject().getURI(), statement2.getSubject().getURI())) {
+                            TrigUtil.addNewStatement(matchingStatements, statement1);
+                        }
+                    }
+                }
+            }
+        }
+        return matchingStatements;
+    }
+
+    static boolean matchPreferredLabel (HashMap<String, ArrayList<Statement>> seckgMap, String uri1, String uri2) {
+        String prefLabel1 = "";
+        String prefLabel2 = "";
+        if (seckgMap.containsKey(uri1)) {
+            ArrayList<Statement> statements = seckgMap.get(uri1);
+            for (int i = 0; i < statements.size(); i++) {
+                Statement statement = statements.get(i);
+                if (statement.getPredicate().getLocalName().equals("prefLabel")) {
+                    prefLabel1 = statement.getObject().asLiteral().toString();
+                }
+            }
+        }
+        if (seckgMap.containsKey(uri2)) {
+            ArrayList<Statement> statements = seckgMap.get(uri2);
+            for (int i = 0; i < statements.size(); i++) {
+                Statement statement = statements.get(i);
+                if (statement.getPredicate().getLocalName().equals("prefLabel")) {
+                    prefLabel2 = statement.getObject().asLiteral().toString();
+                }
+            }
+        }
+        if (prefLabel1.equalsIgnoreCase(prefLabel2) && !prefLabel1.isEmpty()) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
     static ArrayList<Statement> getNewStatements (ArrayList<Statement>statements2, ArrayList<Statement> statements1) {
         ArrayList<Statement> newStatements = new ArrayList<>();
         for (int i = 0; i < statements1.size(); i++) {
@@ -155,6 +151,16 @@ public class EventIdentity {
         return newStatements;
     }
 
+    static boolean identityStatement (Statement statement, MatchSettings matchSettings) {
+        if (matchSettings.isMatchAny()) return true;
+        if (matchSettings.isMatchDbpActor()) return dbpParticipant(statement);
+        if (matchSettings.isMatchEnActor()) return entityParticipant(statement);
+        if (matchSettings.isMatchNeActor()) return nonentityParticipant(statement);
+        if (matchSettings.isMatchDbpPlace()) return dbpPlace(statement);
+        if (matchSettings.isMatchAnyPlace()) return anyPlace(statement);
+        return false;
+    }
+
     static boolean entityParticipant (Statement statement) {
         if ((statement.getPredicate().getLocalName().equals("A0"))
                         ||
@@ -168,13 +174,30 @@ public class EventIdentity {
         return false;
     }
 
+    static boolean nonentityParticipant (Statement statement) {
+        if ((statement.getPredicate().getLocalName().equals("A0"))
+                        ||
+                (statement.getPredicate().getLocalName().equals("A1"))
+         ) {
+
+            if ((statement.getObject().toString().indexOf("non-entities")>-1)) {
+                return true;
+            }
+            else if ((statement.getObject().toString().indexOf("nonentities")>-1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     static boolean dbpParticipant (Statement statement) {
         if (
                 (statement.getPredicate().getLocalName().equals("A0"))
                         ||
                 (statement.getPredicate().getLocalName().equals("A1"))
          ) {
-            if ((statement.getObject().toString().indexOf("//dbpedia.")>-1)) {
+            //System.out.println("statement.getObject().toString() = " + statement.getObject().toString());
+            if ((statement.getObject().toString().indexOf("dbpedia")>-1)) {
                 return true;
             }
         }
@@ -182,13 +205,25 @@ public class EventIdentity {
     }
 
     static boolean dbpPlace (Statement statement) {
-        if ((statement.getPredicate().getLocalName().equals("hasPlace"))
-         ) {
-            if ((statement.getObject().toString().indexOf("//dbpedia.")>-1)) {
+        if (statement.getPredicate().getLocalName().equals("hasPlace") ||
+                    statement.getPredicate().getLocalName().equals("atPlace-location") ||
+                    statement.getPredicate().getLocalName().equals("AM-LOC")
+                 )
+        {
+            if ((statement.getObject().toString().indexOf("dbpedia")>-1)) {
                 return true;
             }
         }
         return false;
+    }
+    static boolean anyPlace (Statement statement) {
+        if (statement.getPredicate().getLocalName().equals("hasPlace") ||
+            statement.getPredicate().getLocalName().equals("atPlace-location") ||
+            statement.getPredicate().getLocalName().equals("AM-LOC") 
+         )
+        { return true;  }
+        else
+        { return false; }
     }
 
 }
