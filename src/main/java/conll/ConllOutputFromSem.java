@@ -9,7 +9,7 @@ import java.util.HashMap;
 /**
  * Created by piek on 11/11/2017.
  */
-public class ConllAnswerFromSem {
+public class ConllOutputFromSem {
 
     /**
      * #begin document (a212420b8d7c079bd385ff4dba9fea86);
@@ -50,12 +50,22 @@ public class ConllAnswerFromSem {
             File resultFile = new File (resultFolder.getAbsolutePath()+"/"+coNLLfile.getName());
             OutputStream fos = new FileOutputStream(resultFile);
             String inputLine = "";
+            String fileName = "";
+
+
+            /// we use a tokencounter to create token identifiers.
+            /// this is delicate as these tokens need to match across the NAF files and the CoNLL file
+            /// make sure we use the same counting when we convert conll to naf in ConllNafConversion
+            /// We skip DCT and NEWLINE and only count the real tokens
+            /// For every new file, we reset the counter to zero
+
             int tokenCounter = 0;
             while (in.ready() && (inputLine = in.readLine()) != null) {
                 String str = "";
                 if (inputLine.startsWith("#begin document")) {
-                    tokenCounter = 0;
                     //#begin document (a212420b8d7c079bd385ff4dba9fea86);
+                    fileName = inputLine.substring(inputLine.indexOf("(")+1, inputLine.lastIndexOf(")"));
+                    tokenCounter = 0;
                     str += inputLine+"\n";
                 }
                 else if (inputLine.startsWith("#end document")) {
@@ -76,13 +86,11 @@ public class ConllAnswerFromSem {
                             tokenCounter++;
                             String tag = "-";
                             String tokenId = "";
-                           // tokenId = coNLLdata.getUniqueTokenString();
-                            tokenId = "w"+tokenCounter;
+                            ///the format needs to be identical to Task5EventCoref:getTokenEventMap
+                            tokenId = fileName+":w"+tokenCounter;
                             if (tokenEventMap.containsKey(tokenId)) {
                                 String eventId = tokenEventMap.get(tokenId);
                                 Integer intId = Util.getEventId(eventId, allEventKeys);
-                                //eventId = eventId.substring(eventId.lastIndexOf("/")+1);
-                                //tag = Util.getNumericId(eventId)+"\t"+intId;
                                 tag= "("+intId.toString()+")";
                             }
                             str += coNLLdata.toConll(tag);
@@ -109,11 +117,22 @@ public class ConllAnswerFromSem {
             File resultFile = new File (coNLLfile.getAbsolutePath()+".result");
             OutputStream fos = new FileOutputStream(resultFile);
             String inputLine = "";
+            String fileName = "";
+
+            /// we use a tokencounter to create token identifiers.
+            /// this is delicate as these tokens need to match across the NAF files and the CoNLL file
+            /// make sure we use the same counting when we convert conll to naf in ConllNafConversion
+            /// We skip DCT and NEWLINE and only count the real tokens
+            /// For every new file, we reset the counter to zero
+
+            int tokenCount = 0;
             while (in.ready() && (inputLine = in.readLine()) != null) {
                 String str = "";
                 if (inputLine.startsWith("#begin document")) {
                     //#begin document (a212420b8d7c079bd385ff4dba9fea86);
                     str += inputLine+"\n";
+                    fileName = inputLine.substring(inputLine.indexOf("(")+1, inputLine.lastIndexOf(")"));
+                    tokenCount = 0;
                 }
                 else if (inputLine.startsWith("#end document")) {
                     str += inputLine+"\n";
@@ -131,13 +150,17 @@ public class ConllAnswerFromSem {
                         }
                         else {
                             String tag = "-";
-                            String tokenId = coNLLdata.getUniqueTokenString();
+                            tokenCount++;
+                            ///the format needs to be identical to Task5EventCoref:getTokenEventMap
+                            String tokenId = fileName+":w"+tokenCount;
                             if (tokenEventMap.containsKey(tokenId)) {
+                                //tokenId = 00a4747ab229a2ea49288743a55ab22b:w776  filename+NAF token identifier
                                 String eventId = tokenEventMap.get(tokenId);
                                 Integer intId = Util.getEventId(eventId, allEventKeys);
-                                //eventId = eventId.substring(eventId.lastIndexOf("/")+1);
-                                //tag = Util.getNumericId(eventId)+"\t"+intId;
                                 tag= "("+intId.toString()+")";
+                            }
+                            else {
+                               ///////
                             }
                             str += coNLLdata.toConll(tag);
                         }

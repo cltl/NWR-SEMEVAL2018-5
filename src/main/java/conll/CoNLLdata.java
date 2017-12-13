@@ -136,37 +136,15 @@ public class CoNLLdata {
         return jsonObject;
     }
 
-    public KafWordForm toKafWordForm (int n) {
+    public KafWordForm toKafWordForm (int tokenC, int sentenceC) {
         KafWordForm kafWordForm = new KafWordForm();
-        kafWordForm.setWid("w"+Integer.toString(n));
+        kafWordForm.setWid("w"+Integer.toString(tokenC));
         kafWordForm.setWf(this.word);
         kafWordForm.setSent(this.sentence);
+        kafWordForm.setSent(new Integer(sentenceC).toString());
         /// paragraph must be a number
         kafWordForm.setPara(this.getDunitInteger().toString());
         return kafWordForm;
-    }
-
-    public KafWordForm toKafWordForm () {
-        KafWordForm kafWordForm = new KafWordForm();
-        kafWordForm.setWid("w"+getUniqueTokenString());
-        kafWordForm.setWf(this.word);
-        kafWordForm.setSent(this.sentence);
-        /// paragraph must be a number
-        kafWordForm.setPara(this.getDunitInteger().toString());
-        return kafWordForm;
-    }
-
-    public String getUniqueTokenString() {
-
-        String tokStr = replaceAlphaByNumeric(this.fileName);
-        tokStr+= getDunitInteger().toString();
-        if (this.sentence.length()==1) tokStr+="00";
-        if (this.sentence.length()==2) tokStr+="0";
-        tokStr+=this.sentence;
-        if (this.tokenId.length()==1) tokStr+="00";
-        if (this.tokenId.length()==2) tokStr+="0";
-        tokStr += this.tokenId;
-        return tokStr;
     }
 
     String replaceAlphaByNumeric (String str) {

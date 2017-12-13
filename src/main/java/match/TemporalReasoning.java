@@ -2,7 +2,6 @@ package match;
 
 import com.hp.hpl.jena.rdf.model.Statement;
 import objects.Time;
-import vu.cltl.triple.TrigTripleData;
 import vu.cltl.triple.TrigUtil;
 
 import java.util.*;
@@ -14,20 +13,24 @@ public class TemporalReasoning {
 
     static public HashMap<String, ArrayList<String>> getTemporalContainers (
             HashMap<String, ArrayList<Statement>> eckgMap,
-            HashMap<String, ArrayList<Statement>> seckgMap ) {
+            HashMap<String, ArrayList<Statement>> seckgMap,
+            MatchSettings matchSettings) {
         HashMap<String, ArrayList<String>> map = new HashMap<String, ArrayList<String>>();
         Set keySet = eckgMap.keySet();
         Iterator<String> keys = keySet.iterator();
         while (keys.hasNext()) {
            String eventKey = keys.next();
            String timeString = "";
-           // System.out.println("eventKey = " + eventKey);
            if (seckgMap.containsKey(eventKey)) {
                ArrayList<Statement> secondaryStatements = seckgMap.get(eventKey);
                ArrayList<Time> dominantDates = getDominantTimeStrings(secondaryStatements);
                if (dominantDates.size()>0) {
-                   //timeString = dominantDates.get(0).toYearMonthString();
-                   timeString = dominantDates.get(0).toYearMonthDayString();
+                   if (matchSettings.isDay()) {
+                       timeString = dominantDates.get(0).toYearMonthDayString();
+                   }
+                   else {
+                       timeString = dominantDates.get(0).toYearMonthString();
+                   }
                }
            }
            if (timeString.isEmpty()) {
@@ -45,40 +48,6 @@ public class TemporalReasoning {
            }
         }
         return map;
-    }
-
-    static ArrayList<String> getTimeStrings (ArrayList<Statement> statements) {
-            //nwr:tmx1	inDateTime	20170131
-            //nwr:tmx1	inDateTime	201701
-            //nwr:tmx1	inDateTime	2017
-            //"day": "14/01/2017"
-            //"month": "01/2017"
-            //"year": "2017"
-        /**
-         *     <http://www.newsreader-project.eu/time/20170131>
-                     a              time:DateTimeDescription ;
-                     time:day       "---31"^^<http://www.w3.org/2001/XMLSchema#gDay> ;
-                     time:month     "--01"^^<http://www.w3.org/2001/XMLSchema#gMonth> ;
-                     time:unitType  time:unitDay ;
-                     time:year      "2017"^^<http://www.w3.org/2001/XMLSchema#gYear> .
-
-         <http://www.newsreader-project.eu/data/wikinews/07494133b6fc9cc255b79dbff1eb3623#tmx1>
-                 a                time:Instant ;
-                 rdfs:label       "Tuesday night" ;
-                 gaf:denotedBy    <http://www.newsreader-project.eu/data/wikinews/07494133b6fc9cc255b79dbff1eb3623#char=167,180> ;
-                 time:inDateTime  <http://www.newsreader-project.eu/time/20170131> .
-
-         */
-        ArrayList<String> timeStringArrayList = new ArrayList<String>();
-        String timeString = "";
-        for (int i = 0; i < statements.size(); i++) {
-            Statement statement = statements.get(i);
-            if (statement.getPredicate().getLocalName().equals("inDateTime")) {
-                timeString = TrigUtil.getPrettyNSValue(statement.getObject().toString());
-                timeStringArrayList.add(timeString);
-            }
-        }
-        return timeStringArrayList;
     }
 
     static ArrayList<Time> getDominantTimeStrings (ArrayList<Statement> statements) {
@@ -195,42 +164,6 @@ public class TemporalReasoning {
             System.out.println(((Map.Entry<String, Integer>) e).getKey() + " : "
                     + ((Map.Entry<String, Integer>) e).getValue());
         }
-    }
-
-    /**
-     * KS util
-     * @param trigTripleData
-     * @return
-     */
-    public static HashMap<String, ArrayList<Statement>> getTimeObjectsHashMap (ArrayList<String> subjectUriArrayList,
-                                                                               TrigTripleData trigTripleData) {
-        HashMap<String, ArrayList<Statement>>  eckgMap = new HashMap<String, ArrayList<Statement>>();
-        for (int k = 0; k < subjectUriArrayList.size(); k++) {
-            String tripleKey =  subjectUriArrayList.get(k);
-            ArrayList<Statement> statements = new ArrayList<Statement>();
-            ArrayList<String> objectKeys = new ArrayList<String>();
-            if (trigTripleData.tripleMapOthers.containsKey(tripleKey)) {
-                ArrayList<Statement> semStatements = trigTripleData.tripleMapOthers.get(tripleKey);
-                for (int j = 0; j < semStatements.size(); j++) {
-                    Statement semStatement = semStatements.get(j);
-                    //String objectUri = semStatement.getObject().asLiteral().getString();
-                    String objectUri = ""; //getObjectUriValueAsString(semStatement);
-                    //System.out.println("objectUri = " + objectUri);
-                    if (!objectKeys.contains(objectUri)) objectKeys.add(objectUri);
-                }
-            }
-            /// Next we get all the properties of the objects
-            for (int j = 0; j < objectKeys.size(); j++) {
-                String s = objectKeys.get(j);
-                if (trigTripleData.tripleMapInstances.containsKey(s))  {
-                    ArrayList<Statement> objStatements = trigTripleData.tripleMapInstances.get(s);
-                    statements.addAll(objStatements);
-                }
-
-            }
-            eckgMap.put(tripleKey, statements);
-        }
-        return eckgMap;
     }
 
 

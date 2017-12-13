@@ -11,11 +11,14 @@ public class MatchSettings {
     private boolean matchDbpActor;
     private boolean matchAnyPlace;
     private boolean matchDbpPlace;
+    private boolean day;
     private Integer tripleMatchThreshold;
+    private Integer editDistanceThreshold;
 
     public MatchSettings() {
         init();
     }
+
 
     void init () {
         this.matchAny = false;
@@ -24,16 +27,20 @@ public class MatchSettings {
         this.matchDbpActor = false;
         this.matchAnyPlace = false;
         this.matchDbpPlace = false;
+        this.day = true;
         this.tripleMatchThreshold = 5;
+        this.editDistanceThreshold = 1;
     }
 
-    public void alltrue () {
+    public void setLoose () {
             this.matchEnActor = true;
             this.matchNeActor = true;
             this.matchDbpActor = true;
             this.matchAnyPlace = true;
             this.matchDbpPlace = true;
-            this.tripleMatchThreshold = 1;
+            this.day = true;
+            this.tripleMatchThreshold = 2;
+            this.editDistanceThreshold = 3;
     }
 
     public void parseArguments(String[] args) {
@@ -56,6 +63,15 @@ public class MatchSettings {
             }
             else if (arg.equals("--any")) {
                 matchAny = true;
+            }
+            else if (arg.equals("--day")) {
+                day = true;
+            }
+            else if (arg.equals("--n-triples") && args.length>(i+1)) {
+                tripleMatchThreshold = Integer.parseInt(args[i+1]);
+            }
+            else if (arg.equals("--levenshtein") && args.length>(i+1)) {
+                editDistanceThreshold = Integer.parseInt(args[i+1]);
             }
         }
     }
@@ -83,6 +99,21 @@ public class MatchSettings {
     public boolean isMatchDbpPlace() {return matchDbpPlace;}
     public boolean isMatchAnyPlace() {  return matchAnyPlace; }
 
+    public boolean isDay() {
+        return day;
+    }
+
+    public void setDay(boolean day) {
+        this.day = day;
+    }
+
+    public Integer getEditDistanceThreshold() {
+        return editDistanceThreshold;
+    }
+
+    public void setEditDistanceThreshold(Integer editDistanceThreshold) {
+        this.editDistanceThreshold = editDistanceThreshold;
+    }
 
     public Integer getTripleMatchThreshold() {
         return tripleMatchThreshold;
@@ -90,5 +121,19 @@ public class MatchSettings {
 
     public void setTripleMatchThreshold(Integer tripleMatchThreshold) {
         this.tripleMatchThreshold = tripleMatchThreshold;
+    }
+
+    public String getSettings() {
+        String str ="Settings:\n";
+        str += ".matchAny = "+ matchAny +"\n";
+        str += ".matchEnActor = "+ matchEnActor+"\n";
+        str += ".matchNeActor = "+ matchNeActor+"\n";
+        str += ".matchDbpActor = "+ matchDbpActor+"\n";
+        str += ".matchAnyPlace = "+ matchAnyPlace+"\n";
+        str += ".matchDbpPlace = "+ matchDbpPlace+"\n";
+        str += ".day = "+ day+"\n";
+        str += ".tripleMatchThreshold = "+ tripleMatchThreshold+"\n";
+        str += ".editDistanceThreshold = "+ editDistanceThreshold+"\n";
+        return str;
     }
 }

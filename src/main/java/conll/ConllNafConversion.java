@@ -111,6 +111,15 @@ e54a480756b852ed2f0596e130652b64.b20.21	NEWLINE	BODY	-
             String inputLine = "";
             String fileName = "";
             String rawText = "";
+
+            /// we use a tokencounter to create token identifiers.
+            /// this is delicate as these tokens need to match across the NAF files and the CoNLL file
+            /// make sure we use the same counting when we convert conll to naf in ConllOutputFromSem
+            /// We skip DCT and NEWLINE and only count the real tokens
+            /// For every new file, we reset the counter to zero
+
+            int tokenCount = 0;
+            ArrayList<String> paragraphSentenceIdList = new ArrayList<>();
             KafSaxParser kafSaxParser = new KafSaxParser();
             while (in.ready() && (inputLine = in.readLine()) != null) {
                 if (inputLine.startsWith("#begin document")) {
@@ -120,13 +129,15 @@ e54a480756b852ed2f0596e130652b64.b20.21	NEWLINE	BODY	-
                     fileName = inputLine.substring(inputLine.indexOf("(")+1, inputLine.lastIndexOf(")"));
                     kafSaxParser.getKafMetaData().setUrl(fileName);
                     kafSaxParser.getKafMetaData().setLanguage("en");
+                    tokenCount = 0;
+                    paragraphSentenceIdList = new ArrayList<>();
                 }
                 else if (inputLine.startsWith("#end document")) {
-                    kafSaxParser.rawText = rawText.trim();
-                    String outputPath = parentFolder.getAbsolutePath()+"/"+fileName+".naf";
-                    OutputStream fos = new FileOutputStream(outputPath);
-                    kafSaxParser.writeNafToStream(fos);
-                    fos.close();
+                        kafSaxParser.rawText = rawText.trim();
+                        String outputPath = parentFolder.getAbsolutePath() + "/" + fileName + ".naf";
+                        OutputStream fos = new FileOutputStream(outputPath);
+                        kafSaxParser.writeNafToStream(fos);
+                        fos.close();
                 }
                 else {
                     String[] fields = inputLine.split("\t");
@@ -147,10 +158,12 @@ e54a480756b852ed2f0596e130652b64.b20.21	NEWLINE	BODY	-
                             rawText+="\n";
                         }
                         else {
-                            //e54a480756b852ed2f0596e130652b64.b20.20	.	BODY	-
-                           // int n = kafSaxParser.getKafWordFormList().size()+1;
-                           // Integer numericId = Integer.parseInt(Util.getNumericId(inputLine));
-                            KafWordForm kafWordForm = coNLLdata.toKafWordForm(kafSaxParser.kafWordFormList.size()+1);
+                            tokenCount++;
+                            //// Sentence ids are not unique in Conll but need to be unqiue and sequetial in NAF
+                            //// We create a list with unique ids by combining with the Dunit (TITLE, BODY)
+                            String paragraphSentenceId = coNLLdata.getDunit()+"."+coNLLdata.getSentence();
+                            if (!paragraphSentenceIdList.contains(paragraphSentenceId)) paragraphSentenceIdList.add(paragraphSentenceId);
+                            KafWordForm kafWordForm = coNLLdata.toKafWordForm(tokenCount, paragraphSentenceIdList.size());
                             //KafWordForm kafWordForm = coNLLdata.toKafWordForm();
                             kafWordForm.setCharOffset(Integer.toString(rawText.length()));
                             kafWordForm.setCharLength(Integer.toString(coNLLdata.getWord().length()));

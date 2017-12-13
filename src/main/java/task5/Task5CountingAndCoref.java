@@ -1,6 +1,6 @@
 package task5;
 
-import conll.ConllAnswerFromSem;
+import conll.ConllOutputFromSem;
 import com.hp.hpl.jena.rdf.model.Statement;
 import match.EventIdentity;
 import match.MatchSettings;
@@ -54,7 +54,7 @@ public class Task5CountingAndCoref {
 
         /// process all trig files and build the knowledge graphs
         ArrayList<File> trigFiles = Util.makeRecursiveFileList(new File(pathToTrigFiles), ".trig");
-        vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.readTripleFromTrigFiles(trigFiles);
+        vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.simpleRdfReader(trigFiles);
         ArrayList<String> domainEvents = EventTypes.getEventSubjectUris(trigTripleData.tripleMapInstances);
         HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
@@ -163,7 +163,7 @@ public class Task5CountingAndCoref {
             for (int i = 0; i < conllFiles.size(); i++) {
                 File conllFile =conllFiles.get(i);
                 System.out.println("conllFile = " + conllFile);
-                ConllAnswerFromSem.resultForCoNLLFile(conllResultFolder, conllFile, allEventKeys, tokenEventIdMap);
+                ConllOutputFromSem.resultForCoNLLFile(conllResultFolder, conllFile, allEventKeys, tokenEventIdMap);
             }
 
         } catch (Exception e) {

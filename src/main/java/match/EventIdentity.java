@@ -96,7 +96,7 @@ public class EventIdentity {
                 for (int j = 0; j < statements2.size(); j++) {
                     Statement statement2 = statements2.get(j);
                     if (identityStatement(statement2, matchSettings)) {
-                        if (matchPreferredLabel(seckgMap, statement1.getSubject().getURI(), statement2.getSubject().getURI())) {
+                        if (matchPreferredLabel(seckgMap, statement1.getSubject().getURI(), statement2.getSubject().getURI(), matchSettings.getEditDistanceThreshold())) {
                             TrigUtil.addNewStatement(matchingStatements, statement1);
                         }
                     }
@@ -106,7 +106,7 @@ public class EventIdentity {
         return matchingStatements;
     }
 
-    static boolean matchPreferredLabel (HashMap<String, ArrayList<Statement>> seckgMap, String uri1, String uri2) {
+    static boolean matchPreferredLabel (HashMap<String, ArrayList<Statement>> seckgMap, String uri1, String uri2, int maxDistance) {
         String prefLabel1 = "";
         String prefLabel2 = "";
         if (seckgMap.containsKey(uri1)) {
@@ -130,10 +130,14 @@ public class EventIdentity {
         if (prefLabel1.equalsIgnoreCase(prefLabel2) && !prefLabel1.isEmpty()) {
             return true;
         }
+        else if (distance(prefLabel1.toLowerCase(), prefLabel2.toLowerCase())<maxDistance) {
+            return true;
+        }
         else {
             return false;
         }
     }
+
     static ArrayList<Statement> getNewStatements (ArrayList<Statement>statements2, ArrayList<Statement> statements1) {
         ArrayList<Statement> newStatements = new ArrayList<>();
         for (int i = 0; i < statements1.size(); i++) {
@@ -224,6 +228,27 @@ public class EventIdentity {
         { return true;  }
         else
         { return false; }
+    }
+
+    public static int distance(String s1, String s2){
+         int edits[][]=new int[s1.length()+1][s2.length()+1];
+         for(int i=0;i<=s1.length();i++)
+             edits[i][0]=i;
+         for(int j=1;j<=s2.length();j++)
+             edits[0][j]=j;
+         for(int i=1;i<=s1.length();i++){
+             for(int j=1;j<=s2.length();j++){
+                 int u=(s1.charAt(i-1)==s2.charAt(j-1)?0:1);
+                 edits[i][j]=Math.min(
+                                 edits[i-1][j]+1,
+                                 Math.min(
+                                    edits[i][j-1]+1,
+                                    edits[i-1][j-1]+u
+                                 )
+                             );
+             }
+         }
+         return edits[s1.length()][s2.length()];
     }
 
 }

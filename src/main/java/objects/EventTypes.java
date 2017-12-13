@@ -59,12 +59,9 @@ public class EventTypes {
         while (keys.hasNext()) {
             String tripleKey = keys.next();
             ArrayList<Statement> statements = tripleMap.get(tripleKey);
-            for (int i = 0; i < statements.size(); i++) {
-                Statement statement = statements.get(i);
-                if (eventTypeMatch(statement)) {
-                    eventUris.add(tripleKey);
-                    break;
-                }
+            if (eventTypeMatch(statements)) {
+                eventUris.add(tripleKey);
+                break;
             }
         }
         return eventUris;
@@ -107,14 +104,43 @@ public class EventTypes {
 
     /**
      * KS util
-     * @param statement
+     * @param statements
      * @return
      */
-    public static boolean eventTypeMatch (Statement statement) {
-        if (statement.getPredicate().getLocalName().equals("type")) {
-            String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
-            if (EventTypes.isType(objValue))  {
-                return true;
+    public static boolean eventTypeMatch (ArrayList<Statement> statements) {
+        for (int i = 0; i < statements.size(); i++) {
+            Statement statement = statements.get(i);
+            if (statement.getPredicate().getLocalName().equals("type")) {
+                String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
+                if (EventTypes.isType(objValue))  {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean eventKillMatch (ArrayList<Statement> statements) {
+        for (int i = 0; i < statements.size(); i++) {
+            Statement statement = statements.get(i);
+            if (statement.getPredicate().getLocalName().equals("type")) {
+                String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
+                if (EventTypes.isKill(objValue))  {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean eventInjuryMatch (ArrayList<Statement> statements) {
+        for (int i = 0; i < statements.size(); i++) {
+            Statement statement = statements.get(i);
+            if (statement.getPredicate().getLocalName().equals("type")) {
+                String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
+                if (EventTypes.isInjury(objValue))  {
+                    return true;
+                }
             }
         }
         return false;

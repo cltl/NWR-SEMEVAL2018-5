@@ -1,11 +1,15 @@
 package task5;
 
+import com.hp.hpl.jena.query.Dataset;
 import com.hp.hpl.jena.rdf.model.Statement;
-import conll.ConllAnswerFromSem;
+import com.hp.hpl.jena.tdb.TDBFactory;
+import conll.ConllOutputFromSem;
 import match.EventIdentity;
 import match.MatchSettings;
 import match.TemporalReasoning;
 import objects.EventTypes;
+import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.riot.RDFFormat;
 import org.json.simple.JSONObject;
 import question.Questiondata;
 import util.Util;
@@ -34,15 +38,12 @@ public class Task5EventCoref {
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
     static public void main(String[] args) {
-        String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data_final/naf-out";
+        String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data_final/NAFOUT";
         String pathToConllFile = "/Users/piek/Desktop/SemEval2018/trial_data_final/s3/docs.conll";
         MatchSettings matchSettings = new MatchSettings();
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
-            if (arg.equals("--triple-threshold") && args.length>(i+1)) {
-                matchSettings.setTripleMatchThreshold(Integer.parseInt(args[i+1]));
-            }
-            else if (arg.equals("--trig-files") && args.length>(i+1)) {
+            if (arg.equals("--trig-files") && args.length>(i+1)) {
                 pathToTrigFiles = args[i+1];
             }
             else if (arg.equals("--conll-file") && args.length>(i+1)) {
@@ -50,8 +51,11 @@ public class Task5EventCoref {
             }
         }
         matchSettings.parseArguments(args);
-        matchSettings.alltrue();
+        matchSettings.setLoose();
        // matchSettings.setMatchAny(true);
+        System.out.println(matchSettings.getSettings());
+        System.out.println("pathToConllFile = " + pathToConllFile);
+        System.out.println("pathToTrigFiles = " + pathToTrigFiles);
         File conllFileFolder = new File (pathToConllFile).getParentFile();
         File eckgFolder = new File (conllFileFolder.getAbsolutePath()+"/"+"eckg");
         if (!eckgFolder.exists()) eckgFolder.mkdir();
@@ -59,6 +63,7 @@ public class Task5EventCoref {
         /// STEP 1
         /// process all trig files and build the knowledge graphs
         ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".trig");
+        System.out.println("trigFiles.size() = " + trigFiles.size());
        // vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.readTripleFromTrigFiles(trigFiles);
         vu.cltl.triple.TrigTripleData trigTripleData = vu.cltl.triple.TrigTripleReader.readTripleFromTrigFiles(trigFiles);
 
@@ -74,7 +79,7 @@ public class Task5EventCoref {
 
         /// STEP 3 DEFINE TEMPORAL AND SPATIAL CONTAINERS
 
-        HashMap<String, ArrayList<String>> temporalContainers = TemporalReasoning.getTemporalContainers(eckgMap, seckgMap);
+        HashMap<String, ArrayList<String>> temporalContainers = TemporalReasoning.getTemporalContainers(eckgMap, seckgMap, matchSettings);
 
 
         /// STEP 4 CROSSDOC EVENT COREF WITHIN CONTAINERS
@@ -82,6 +87,7 @@ public class Task5EventCoref {
         System.out.println("temporalContainers.size() = " + temporalContainers.size());
         Set containerSet = temporalContainers.keySet();
         Iterator<String> containerKeys = containerSet.iterator();
+        HashMap<String, ArrayList<Statement>> finalEvents = new HashMap<>();
         while (containerKeys.hasNext()) {
             String containerKey = containerKeys.next();
             System.out.print("containerKey = " + containerKey+":");
@@ -92,45 +98,50 @@ public class Task5EventCoref {
                                 seckgMap,
                                 matchSettings);
             if (eventIds.size()==containerEvents.size()) {
-                System.out.println("NO MERGE");
+                //System.out.println("NO MERGE");
+                System.out.println();
             }
             else {
                 System.out.println("MERGED = " + (eventIds.size()-containerEvents.size()));
             }
+            finalEvents.putAll(containerEvents);
                        //// Dump the ECKGs
            try {
-               OutputStream fos1 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".csv");
+/*               OutputStream fos1 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".csv");
                OutputStream fos2 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".eckg");
                TrigUtil.printCountedKnowledgeGraph(fos2, containerEvents);
                TrigUtil.printCountedKnowledgeGraphCsv(fos1, containerEvents);
                fos1.close();
-               fos2.close();
+               fos2.close();*/
+
+               OutputStream fos3 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".trig");
+               Dataset dataset = TDBFactory.createDataset();
+               TrigUtil.prefixDefaultModels(dataset);
+               ArrayList<String> containerEventKeys = new ArrayList<>(containerEvents.keySet());
+               HashMap<String, ArrayList<Statement>> seckgContainerEvent = TrigUtil.getSecondaryKnowledgeGraphHashMap( containerEventKeys,trigTripleData);
+               TrigUtil.addStatementsToJenaData(dataset, containerEvents);
+               TrigUtil.addStatementsToJenaData(dataset, seckgContainerEvent);
+               RDFDataMgr.write(fos3, dataset.getDefaultModel(), RDFFormat.TRIG_PRETTY);
+               fos3.close();
+
            } catch (IOException e) {
                e.printStackTrace();
            }
         }
         /// STEP 5 CREATE THE CONLL FILE
-
+        createSystemConllFile(finalEvents, pathToConllFile);
     }
 
 
-     static void createSystemConllFile (HashMap<String, String> tokenEventIdMap,
+     static void createSystemConllFile (
                         HashMap<String, ArrayList<Statement>> eckgMap,
                         String pathToConllFile
                         ) {
-
-           getTokenEventMap(tokenEventIdMap, eckgMap);
-           /*
-                               if (matchTimeConstraint(secondaryStatements, questiondata)) {
-                           if (!eventKeys.contains(eventKey)) eventKeys.add(eventKey);
-                       }
-            */
-
+           HashMap<String, String> tokenEventIdMap =  getTokenEventMap(eckgMap);
            File conllFile = new File (pathToConllFile);
            File conllResultFolder = conllFile.getParentFile();
            if (!conllResultFolder.exists()) conllResultFolder.mkdir();
-           ConllAnswerFromSem.resultForCoNLLFile(conllFile, allEventKeys, tokenEventIdMap);
-
+           ConllOutputFromSem.resultForCoNLLFile(conllFile, allEventKeys, tokenEventIdMap);
      }
 
     //<http://..../02e278ddb2d52a796d111d5a1258b0ee#char=20,25&word=w3&term=t3&sentence=1&paragraph=1>
@@ -175,51 +186,33 @@ public class Task5EventCoref {
         return fileName;
     }
 
-    static  void getTokenEventMap (HashMap<String, String> tokenEventMap, ArrayList<String> eventKeys, HashMap<String, ArrayList<Statement>> kGraph) {
-
-        for (int i = 0; i < eventKeys.size(); i++) {
-            String eventKey = eventKeys.get(i);
-            if (!allEventKeys.contains(eventKey)) allEventKeys.add(eventKey);
-            if (kGraph.containsKey(eventKey)) {
-                ArrayList<Statement> directStatements = kGraph.get(eventKey);
-                for (int j = 0; j < directStatements.size(); j++) {
-                    Statement statement = directStatements.get(j);
-                    if (statement.getPredicate().getLocalName().equals("denotedBy")) {
-                        String mention = statement.getObject().toString();
-                        String fileName = getFileNameFromMention(mention);
-                        ArrayList<String> tokenList = getTokenIdsFromMention(mention);
-                        for (int t = 0; t < tokenList.size(); t++) {
-                            String tokenId = fileName+tokenList.get(t).substring(1);
-                            tokenEventMap.put(tokenId, eventKey);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    static  void getTokenEventMap (HashMap<String, String> tokenEventMap, HashMap<String, ArrayList<Statement>> kGraph) {
+    static  HashMap<String, String>  getTokenEventMap ( HashMap<String, ArrayList<Statement>> kGraph) {
+        HashMap<String, String> tokenEventMap = new HashMap<>();
         Set keySet = kGraph.keySet();
         Iterator<String> keys = keySet.iterator();
         while (keys.hasNext()) {
             String eventKey = keys.next();
+           // System.out.println("eventKey = " + eventKey);
             if (!allEventKeys.contains(eventKey)) allEventKeys.add(eventKey);
             ArrayList<Statement> directStatements = kGraph.get(eventKey);
             for (int j = 0; j < directStatements.size(); j++) {
                 Statement statement = directStatements.get(j);
                 if (statement.getPredicate().getLocalName().equals("denotedBy")) {
                     String mention = statement.getObject().toString();
+                    //System.out.println("mention = " + mention);
                     String fileName = getFileNameFromMention(mention);
                     ArrayList<String> tokenList = getTokenIdsFromMention(mention);
                     for (int t = 0; t < tokenList.size(); t++) {
-                        String tokenId = fileName+tokenList.get(t).substring(1);
+                        String tokenId = fileName+":"+tokenList.get(t);
+                       // System.out.println("tokenId = " + tokenId);
                         tokenEventMap.put(tokenId, eventKey);
                     }
                 }
             }
         }
+        System.out.println("tokenEventMap.size() = " + tokenEventMap.size());
+        return tokenEventMap;
     }
-
 
     static boolean matchTimeConstraint (ArrayList<Statement> statements, Questiondata questiondata) {
             //nwr:tmx1	inDateTime	20170131
