@@ -10,6 +10,16 @@ public class AnswerData {
     /**
      *
      *
+     *   SYSTEM FORMAT
+     *   "3-58795" : {
+         "answer_docs" : [ "82612deb22a2f87b32e04a479c69a97c" ,
+            "82612deb22a2f87b32e04a479c69a97c",
+           "3d4ebabedff57630c86550c2a15465c8" ]
+         ,
+         "numerical_anwer" : 3
+       },
+
+     *    GOLD FORMAT
      *    "2-6869": {
      "answer_docs": {
      "756610": [

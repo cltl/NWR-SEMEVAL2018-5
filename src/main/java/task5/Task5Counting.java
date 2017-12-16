@@ -28,11 +28,14 @@ import static objects.EventTypes.eventKillMatch;
  */
 public class Task5Counting {
 
+    static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/s3/questions.json " +
+            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/s3/eckg --task s3";
     static ArrayList<String> allEventKeys = new ArrayList<>();
-
+    static String task = "s1"; // s2, s3
     static public void main(String[] args) {
-        String pathToQuestionFile = "/Users/piek/Desktop/SemEval2018/trial_data_final/s3/questions.json";
-        String pathToEckgFiles = "/Users/piek/Desktop/SemEval2018/trial_data_final/s3/eckg";
+        String pathToQuestionFile = "";
+        String pathToEckgFiles = "";
+        if (args.length==0) args = testParameters.split(" ");
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             if (arg.equals("--question") && args.length>(i+1)) {
@@ -41,16 +44,22 @@ public class Task5Counting {
             else if (arg.equals("--eckg-files") && args.length>(i+1)) {
                 pathToEckgFiles = args[i+1];
             }
+            else if (arg.equals("--task") && args.length>(i+1)) {
+                task = args[i+1];
+            }
         }
 
         ArrayList<File> eckgFiles = Util.makeRecursiveFileList(new File(pathToEckgFiles), ".trig");
         //// process the question json
         //// match each question constraint with the KG and create json answer and the conll output files for event coreference
         try {
+            File parentFolder = new File(pathToQuestionFile).getParentFile();
+            int count = 0;
             JSONObject jsonObject = Util.readJsonFile(pathToQuestionFile);
             JSONObject answerObjectArray = new JSONObject();
             /// iterate over json array with the questions
             for (Object key : jsonObject.keySet()) {
+                count++;
                 String questionId = (String) key;
                 System.out.println("questionId = " + questionId);
                 Object question = jsonObject.get(questionId);
@@ -67,58 +76,50 @@ public class Task5Counting {
                       //  System.out.println("ignoring:"+eckGFile.getName());
                     }
                 }
-               // System.out.println("myTrigFiles.size() = " + myTrigFiles.size());
                 vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.simpleRdfReader(myTrigFiles);
               //  ArrayList<String> eventKeys = getAllEventKeys(trigTripleData);
                 ArrayList<String> eventKeys = getQuestionDataEventKeys(trigTripleData, questiondata);
                 System.out.println("eventKeys.size() = " + eventKeys.size());
                 JSONObject answerObject = new JSONObject();
-                answerObject.put("numerical_anwer", eventKeys.size());
-                JSONObject docObject = new JSONObject();
+                if (task.equals("s1")) {
+                   // answerObject.put("numerical_answer", 1);
+                }
+                else if (task.equals("s2")) {
+                    answerObject.put("numerical_answer", eventKeys.size());
+                }
+                else if (task.equals("s3")) {
+                    ///// we need to count the participants killed or injured
+                    ArrayList<String> participants = getParticipants(trigTripleData, questiondata);
+                    answerObject.put("numerical_answer", participants.size());
+                }
+
+                /*   SYSTEM FORMAT
+                *   "3-58795" : {
+                    "answer_docs" : [ "82612deb22a2f87b32e04a479c69a97c" ,
+                       "82612deb22a2f87b32e04a479c69a97c",
+                      "3d4ebabedff57630c86550c2a15465c8" ]
+                    ,
+                    "numerical_anwer" : 3
+                  },
+                  */
+                ArrayList<String> fileNames = new ArrayList<>();
                 for (int i = 0; i < eventKeys.size(); i++) {
                     String eventKey = eventKeys.get(i);
-                    Integer intId = Util.getEventId(eventKey, eventKeys);
                     ArrayList<Statement> directStatements = trigTripleData.tripleMapInstances.get(eventKey);
-                    ArrayList<String> fileNames = getFilesFromStatements(directStatements);
-                    docObject.put(intId.toString(), fileNames);
+                    ArrayList<String> files = getFilesFromStatements(directStatements);
+                    for (int j = 0; j < files.size(); j++) {
+                        String file = files.get(j);
+                        if (!fileNames.contains(file)) fileNames.add(file);
+                    }
                     if (fileNames.size()>1) {
-                        System.out.println("fileNames.toString() = " + fileNames.toString());
-                        System.out.println("docObject = " + docObject.toString());
+                     //   System.out.println("fileNames.toString() = " + fileNames.toString());
                     }
                 }
-                answerObject.put ("answer_docs",docObject);
+                answerObject.put("answer_docs", fileNames);
                 answerObjectArray.put(questionId, answerObject);
-                /**
-                 *
-                 *
-                 "3-59876" : {
-                 "answer_docs" : {
-                 "3" : [ "4f7fc8d1692d6bb2f5e450a23e90a034" ],
-                 "4" : [ "4f7fc8d1692d6bb2f5e450a23e90a034" ],
-                 "5" : [ "4f7fc8d1692d6bb2f5e450a23e90a034" ]
-                 },
-                 "numerical_anwer" : 3
-                 },
-                 *
-
-                 "3-58117": {
-                 "answer_docs": {
-                 "750833": [
-                 "f2b694085da3d4c7a47b9daf84203fc2"
-                 ]
-                 },
-                 "numerical_answer": 2,
-                 "part_info": {
-                 "750833": {
-                 "num_injured": 0,
-                 "num_killed": 2
-                 }
-                 }
-                 },
-                 */
-                //break;
+                //if (count>10) break;
             }
-            try (FileWriter file = new FileWriter(pathToQuestionFile+".answer.json")) {
+            try (FileWriter file = new FileWriter(parentFolder+"/"+"answers.json")) {
                 ObjectMapper mapper = new ObjectMapper();
                 file.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(answerObjectArray));
                 file.flush();
@@ -169,6 +170,46 @@ public class Task5Counting {
             }
         }
         return keys;
+    }
+
+    static ArrayList<String> getParticipants (TrigTripleData trigTripleData, Questiondata questiondata) {
+        ArrayList<String> participants = new ArrayList<>();
+        Set keySet = trigTripleData.tripleMapInstances.keySet();
+        Iterator<String> keySetKeys = keySet.iterator();
+        while (keySetKeys.hasNext()) {
+            String key = keySetKeys.next();
+            ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get(key);
+            if (checkType(questiondata, statements) && checkLocation(questiondata, statements)) {
+                for (int i = 0; i < statements.size(); i++) {
+                    Statement statement = statements.get(i);
+                    String participantUri = "";
+                    if (statement.getPredicate().getLocalName().equalsIgnoreCase("a0")) {
+                        participantUri = statement.getObject().asResource().getURI();
+                    }
+                    else if (statement.getPredicate().getLocalName().equalsIgnoreCase("a1")) {
+                        participantUri = statement.getObject().asResource().getURI();
+                    }
+                    if (!participantUri.isEmpty()) {
+                        if (trigTripleData.tripleMapInstances.containsKey(participantUri)) {
+                            ArrayList<Statement> participantStatements = trigTripleData.tripleMapInstances.get(participantUri);
+                            for (int j = 0; j < participantStatements.size(); j++) {
+                                Statement participantStatement = participantStatements.get(j);
+                                if (participantStatement.getPredicate().getLocalName().equals("type")) {
+                                    //System.out.println("participantStatement.getObject().toString() = " + participantStatement.getObject().toString());
+                                    if (participantStatement.getObject().asResource().getLocalName().equals("PER")) {
+                                        if (!participants.contains(participantUri)) {
+                                            participants.add(participantUri);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        System.out.println("participants = " + participants.toString());
+        return participants;
     }
 
     static boolean checkLocation (Questiondata questiondata, ArrayList<Statement> statements) {
