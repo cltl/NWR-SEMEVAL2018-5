@@ -163,7 +163,7 @@ public class Task5Counting {
         while (keySetKeys.hasNext()) {
             String key = keySetKeys.next();
             ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get(key);
-            if (checkType(questiondata, statements) && checkLocation(questiondata, statements)) {
+            if (checkType(questiondata, statements) && checkLocation(questiondata, statements, trigTripleData)) {
                 if (!keys.contains(key)) {
                     keys.add(key);
                 }
@@ -179,7 +179,7 @@ public class Task5Counting {
         while (keySetKeys.hasNext()) {
             String key = keySetKeys.next();
             ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get(key);
-            if (checkType(questiondata, statements) && checkLocation(questiondata, statements)) {
+            if (checkType(questiondata, statements) && checkLocation(questiondata, statements, trigTripleData)) {
                 for (int i = 0; i < statements.size(); i++) {
                     Statement statement = statements.get(i);
                     String participantUri = "";
@@ -212,7 +212,7 @@ public class Task5Counting {
         return participants;
     }
 
-    static boolean checkLocation (Questiondata questiondata, ArrayList<Statement> statements) {
+    static boolean checkLocation (Questiondata questiondata, ArrayList<Statement> statements, TrigTripleData trigTripleData) {
         for (int i = 0; i < statements.size(); i++) {
             Statement statement = statements.get(i);
             if (statement.getPredicate().getLocalName().equals("hasActor") ||
@@ -220,6 +220,22 @@ public class Task5Counting {
                 if (statement.getObject().toString().equals(questiondata.getCity()) ||
                         statement.getObject().toString().equals(questiondata.getState())) {
                     return true;
+                }
+                else {
+                    if (trigTripleData.tripleMapInstances.containsKey(statement.getObject().toString())) {
+                        ArrayList<Statement> statementArrayList = trigTripleData.tripleMapInstances.get(statement.getObject().toString());
+                        for (int j = 0; j < statementArrayList.size(); j++) {
+                            Statement objectStatement = statementArrayList.get(j);
+                            if (objectStatement.getPredicate().getLocalName().equals("type")) {
+                                /////    <http://dbpedia.org/resource/Colton,_California>
+                                /////       a  <http://dbpedia.org/resource/Colton,_California> , nwrontology:MISC , nwrontology:LOC , <http://dbpedia.org/resource/Colton,_Staffordshire> , <http://dbpedia.org/resource/Colton,_Washington> , <http://dbpedia.org/resource/Colton,_New_York> , <http://dbpedia.org/resource/Colton,_Leeds> , <http://dbpedia.org/resource/Colton,_Utah> , <http://dbpedia.org/resource/Electoral_district_of_Colton> , <http://dbpedia.org/resource/Colton,_Cumbria> , nwrontology:ORG ;
+                                if (objectStatement.getObject().toString().equals(questiondata.getCity()) ||
+                                        objectStatement.getObject().toString().equals(questiondata.getState())) {
+                                                    return true;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
