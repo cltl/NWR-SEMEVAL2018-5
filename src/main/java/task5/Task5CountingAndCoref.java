@@ -20,7 +20,7 @@ import java.util.Set;
 
 /**
  * Created by piek on 10/11/2017.
- * This version of the task only considers events and documents within the range of the time and documents provided in the query json file.
+ * This version of the subtask only considers events and documents within the range of the time and documents provided in the query json file.
  * The json query format was changed so that there is no specific set of documents anymore associated with each query.
  *
  */

@@ -29,6 +29,7 @@ public class EventTypes {
             "fn:Recovery", "fn:Resurrection"};
 
     public static boolean isType(String type) {
+       // System.out.println("type = " + type);
         for (int i = 0; i < types.length; i++) {
             String s = types[i];
             if (s.equals(type)) return true;
@@ -61,7 +62,6 @@ public class EventTypes {
             ArrayList<Statement> statements = tripleMap.get(tripleKey);
             if (eventTypeMatch(statements)) {
                 eventUris.add(tripleKey);
-                break;
             }
         }
         return eventUris;

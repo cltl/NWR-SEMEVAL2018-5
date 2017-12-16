@@ -28,13 +28,15 @@ import static objects.EventTypes.eventKillMatch;
  */
 public class Task5Counting {
 
-    static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/s3/questions.json " +
-            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/s3/eckg --task s3";
+    static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/s2/questions.json " +
+            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/s3/eckg --subtask s2";
     static ArrayList<String> allEventKeys = new ArrayList<>();
-    static String task = "s1"; // s2, s3
+    static String subtask = "s1"; // s2, s3
+
     static public void main(String[] args) {
         String pathToQuestionFile = "";
         String pathToEckgFiles = "";
+        String taskFolder = "";
         if (args.length==0) args = testParameters.split(" ");
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
@@ -44,95 +46,119 @@ public class Task5Counting {
             else if (arg.equals("--eckg-files") && args.length>(i+1)) {
                 pathToEckgFiles = args[i+1];
             }
+            else if (arg.equals("--subtask") && args.length>(i+1)) {
+                subtask = args[i+1];
+            }
             else if (arg.equals("--task") && args.length>(i+1)) {
-                task = args[i+1];
+                taskFolder = args[i+1];
             }
         }
 
         ArrayList<File> eckgFiles = Util.makeRecursiveFileList(new File(pathToEckgFiles), ".trig");
-        //// process the question json
-        //// match each question constraint with the KG and create json answer and the conll output files for event coreference
-        try {
-            File parentFolder = new File(pathToQuestionFile).getParentFile();
-            int count = 0;
-            JSONObject jsonObject = Util.readJsonFile(pathToQuestionFile);
-            JSONObject answerObjectArray = new JSONObject();
-            /// iterate over json array with the questions
-            for (Object key : jsonObject.keySet()) {
-                count++;
-                String questionId = (String) key;
-                System.out.println("questionId = " + questionId);
-                Object question = jsonObject.get(questionId);
-                Questiondata questiondata = new Questiondata(questionId, (JSONObject) question);
-                String dataString = questiondata.getYear()+questiondata.getNormalisedMonth()+ questiondata.getNormalisedDay();
-                //System.out.println("dataString = " + dataString);
-                ArrayList<File> myTrigFiles = new ArrayList<>();
-                for (int i = 0; i < eckgFiles.size(); i++) {
-                    File eckGFile = eckgFiles.get(i);
-                    if (eckGFile.getName().startsWith(dataString)) {
-                        myTrigFiles.add(eckGFile);
-                    }
-                    else {
-                      //  System.out.println("ignoring:"+eckGFile.getName());
-                    }
-                }
-                vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.simpleRdfReader(myTrigFiles);
-              //  ArrayList<String> eventKeys = getAllEventKeys(trigTripleData);
-                ArrayList<String> eventKeys = getQuestionDataEventKeys(trigTripleData, questiondata);
-                System.out.println("eventKeys.size() = " + eventKeys.size());
-                JSONObject answerObject = new JSONObject();
-                if (task.equals("s1")) {
-                   // answerObject.put("numerical_answer", 1);
-                }
-                else if (task.equals("s2")) {
-                    answerObject.put("numerical_answer", eventKeys.size());
-                }
-                else if (task.equals("s3")) {
-                    ///// we need to count the participants killed or injured
-                    ArrayList<String> participants = getParticipants(trigTripleData, questiondata);
-                    answerObject.put("numerical_answer", participants.size());
-                }
-
-                /*   SYSTEM FORMAT
-                *   "3-58795" : {
-                    "answer_docs" : [ "82612deb22a2f87b32e04a479c69a97c" ,
-                       "82612deb22a2f87b32e04a479c69a97c",
-                      "3d4ebabedff57630c86550c2a15465c8" ]
-                    ,
-                    "numerical_anwer" : 3
-                  },
-                  */
-                ArrayList<String> fileNames = new ArrayList<>();
-                for (int i = 0; i < eventKeys.size(); i++) {
-                    String eventKey = eventKeys.get(i);
-                    ArrayList<Statement> directStatements = trigTripleData.tripleMapInstances.get(eventKey);
-                    ArrayList<String> files = getFilesFromStatements(directStatements);
-                    for (int j = 0; j < files.size(); j++) {
-                        String file = files.get(j);
-                        if (!fileNames.contains(file)) fileNames.add(file);
-                    }
-                    if (fileNames.size()>1) {
-                     //   System.out.println("fileNames.toString() = " + fileNames.toString());
-                    }
-                }
-                answerObject.put("answer_docs", fileNames);
-                answerObjectArray.put(questionId, answerObject);
-                //if (count>10) break;
-            }
-            try (FileWriter file = new FileWriter(parentFolder+"/"+"answers.json")) {
-                ObjectMapper mapper = new ObjectMapper();
-                file.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(answerObjectArray));
-                file.flush();
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (!taskFolder.isEmpty()) {
+            subtask = "s1";
+            pathToQuestionFile = taskFolder+"/"+subtask+"/"+"questions.json";
+            performSubtask(eckgFiles, pathToQuestionFile, subtask);
+            subtask = "s2";
+            pathToQuestionFile = taskFolder+"/"+subtask+"/"+"questions.json";
+            performSubtask(eckgFiles, pathToQuestionFile, subtask);
+            subtask = "s3";
+            pathToQuestionFile = taskFolder+"/"+subtask+"/"+"questions.json";
+            performSubtask(eckgFiles, pathToQuestionFile, subtask);
+        }
+        else {
+            performSubtask(eckgFiles, pathToQuestionFile, subtask);
         }
     }
 
+    static void performSubtask (ArrayList<File> eckgFiles, String pathToQuestionFile, String subtask) {
+        //// process the question json
+               //// match each question constraint with the KG and create json answer and the conll output files for event coreference
+           try {
+               File parentFolder = new File(pathToQuestionFile).getParentFile();
+               int count = 0;
+               JSONObject jsonObject = Util.readJsonFile(pathToQuestionFile);
+               JSONObject answerObjectArray = new JSONObject();
+               /// iterate over json array with the questions
+               for (Object key : jsonObject.keySet()) {
+                   count++;  /// just to break for testing
+                   String questionId = (String) key;
+                   System.out.println("questionId = " + questionId);
+                   Object question = jsonObject.get(questionId);
+                   Questiondata questiondata = new Questiondata(questionId, (JSONObject) question);
+                   String dataString = questiondata.getYear()+questiondata.getNormalisedMonth()+ questiondata.getNormalisedDay();
+                   //System.out.println("dataString = " + dataString);
+                   ArrayList<File> myTrigFiles = new ArrayList<>();
+                   for (int i = 0; i < eckgFiles.size(); i++) {
+                       File eckGFile = eckgFiles.get(i);
+                       if (eckGFile.getName().startsWith(dataString)) {
+                           myTrigFiles.add(eckGFile);
+                       }
+                       else { ///////
+                       }
+                   }
+                   vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.simpleRdfReader(myTrigFiles);
+                 //  ArrayList<String> eventKeys = getAllEventKeys(trigTripleData);
+                   ArrayList<String> eventKeys = getQuestionDataEventKeys(trigTripleData, questiondata);
+                   System.out.println("Events = " + eventKeys.size());
+                   ArrayList<String> participants = getParticipants(trigTripleData, questiondata);
+                   System.out.println("Victims = " + participants.size());
+                   JSONObject answerObject = new JSONObject();
+                   if (subtask.equals("s1")) {
+                      // answerObject.put("numerical_answer", 1);
+                   }
+                   else if (subtask.equals("s2")) {
+                       answerObject.put("numerical_answer", eventKeys.size());
+                   }
+                   else if (subtask.equals("s3")) {
+                       ///// we need to count the participants killed or injured
+                       answerObject.put("numerical_answer", participants.size());
+                   }
+
+                   /*   SYSTEM FORMAT
+                   *   "3-58795" : {
+                       "answer_docs" : [ "82612deb22a2f87b32e04a479c69a97c" ,
+                          "82612deb22a2f87b32e04a479c69a97c",
+                         "3d4ebabedff57630c86550c2a15465c8" ]
+                       ,
+                       "numerical_anwer" : 3
+                     },
+                     */
+                   ArrayList<String> fileNames = new ArrayList<>();
+                   for (int i = 0; i < eventKeys.size(); i++) {
+                       String eventKey = eventKeys.get(i);
+                       ArrayList<Statement> directStatements = trigTripleData.tripleMapInstances.get(eventKey);
+                       ArrayList<String> files = getFilesFromStatements(directStatements);
+                       for (int j = 0; j < files.size(); j++) {
+                           String file = files.get(j);
+                           if (!fileNames.contains(file)) fileNames.add(file);
+                       }
+                       if (fileNames.size()>1) {
+                        //   System.out.println("fileNames.toString() = " + fileNames.toString());
+                       }
+                   }
+                   if (subtask.equals("s3") && participants.size()==0) {
+                       //// No victims and therefore no documents either, answer is 0
+                   }
+                   else {
+                       answerObject.put("answer_docs", fileNames);
+                   }
+                   answerObjectArray.put(questionId, answerObject);
+                   //if (count>10) break;
+               }
+               try (FileWriter file = new FileWriter(parentFolder+"/"+"answers.json")) {
+                   ObjectMapper mapper = new ObjectMapper();
+                   file.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(answerObjectArray));
+                   file.flush();
+
+               } catch (IOException e) {
+                   e.printStackTrace();
+               }
+
+           } catch (Exception e) {
+               e.printStackTrace();
+           }
+    }
 
     static ArrayList<String> getAllEventKeys (TrigTripleData trigTripleData) {
         ArrayList<String> keys = new ArrayList<>();

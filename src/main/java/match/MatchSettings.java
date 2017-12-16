@@ -39,7 +39,7 @@ public class MatchSettings {
             this.matchAnyPlace = true;
             this.matchDbpPlace = true;
             this.day = true;
-            this.tripleMatchThreshold = 2;
+            this.tripleMatchThreshold = 1;
             this.editDistanceThreshold = 3;
     }
 
