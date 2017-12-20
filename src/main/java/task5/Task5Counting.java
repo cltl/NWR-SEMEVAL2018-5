@@ -28,8 +28,8 @@ import static objects.EventTypes.eventKillMatch;
  */
 public class Task5Counting {
 
-    static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s2/questions.json " +
-            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/eckg --subtask s2";
+    static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/questions.json " +
+            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/eckg --subtask s3";
     static ArrayList<String> allEventKeys = new ArrayList<>();
     static String subtask = "s1"; // s2, s3
 
@@ -92,11 +92,13 @@ public class Task5Counting {
                    for (int i = 0; i < eckgFiles.size(); i++) {
                        File eckGFile = eckgFiles.get(i);
                        if (eckGFile.getName().startsWith(dataString)) {
+                           /// by using startWith, we ensure that constraints for just the year or month still match with 
                            myTrigFiles.add(eckGFile);
                        }
                        else { ///////
                        }
                    }
+                   System.out.println("myTrigFiles.size() = " + myTrigFiles.size());
                    vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.simpleRdfReader(myTrigFiles);
                  //  ArrayList<String> eventKeys = getAllEventKeys(trigTripleData);
                    ArrayList<String> eventKeys = getQuestionDataEventKeys(trigTripleData, questiondata);
@@ -105,7 +107,7 @@ public class Task5Counting {
                    System.out.println("Victims = " + participants.size());
                    JSONObject answerObject = new JSONObject();
                    if (subtask.equals("s1")) {
-                      // answerObject.put("numerical_answer", 1);
+                       // for subtask1 we should not add the numerical answer!!! It is always 1
                    }
                    else if (subtask.equals("s2")) {
                        answerObject.put("numerical_answer", eventKeys.size());
@@ -115,15 +117,6 @@ public class Task5Counting {
                        answerObject.put("numerical_answer", participants.size());
                    }
 
-                   /*   SYSTEM FORMAT
-                   *   "3-58795" : {
-                       "answer_docs" : [ "82612deb22a2f87b32e04a479c69a97c" ,
-                          "82612deb22a2f87b32e04a479c69a97c",
-                         "3d4ebabedff57630c86550c2a15465c8" ]
-                       ,
-                       "numerical_anwer" : 3
-                     },
-                     */
                    ArrayList<String> fileNames = new ArrayList<>();
                    for (int i = 0; i < eventKeys.size(); i++) {
                        String eventKey = eventKeys.get(i);
@@ -138,13 +131,12 @@ public class Task5Counting {
                        }
                    }
                    if (subtask.equals("s3") && participants.size()==0) {
-                       //// No victims and therefore no documents either, answer is 0
+                       //// No victims and therefore no documents either, answer should be 0
                    }
                    else {
                        answerObject.put("answer_docs", fileNames);
                    }
                    answerObjectArray.put(questionId, answerObject);
-                   //if (count>10) break;
                }
                try (FileWriter file = new FileWriter(parentFolder+"/"+"answers.json")) {
                    ObjectMapper mapper = new ObjectMapper();
