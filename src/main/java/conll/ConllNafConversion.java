@@ -158,17 +158,23 @@ e54a480756b852ed2f0596e130652b64.b20.21	NEWLINE	BODY	-
                             rawText+="\n";
                         }
                         else {
-                            tokenCount++;
-                            //// Sentence ids are not unique in Conll but need to be unqiue and sequetial in NAF
-                            //// We create a list with unique ids by combining with the Dunit (TITLE, BODY)
-                            String paragraphSentenceId = coNLLdata.getDunit()+"."+coNLLdata.getSentence();
-                            if (!paragraphSentenceIdList.contains(paragraphSentenceId)) paragraphSentenceIdList.add(paragraphSentenceId);
-                            KafWordForm kafWordForm = coNLLdata.toKafWordForm(tokenCount, paragraphSentenceIdList.size());
-                            //KafWordForm kafWordForm = coNLLdata.toKafWordForm();
-                            kafWordForm.setCharOffset(Integer.toString(rawText.length()));
-                            kafWordForm.setCharLength(Integer.toString(coNLLdata.getWord().length()));
-                            rawText += " " + coNLLdata.getWord();
-                            kafSaxParser.kafWordFormList.add(kafWordForm);
+                            if (!coNLLdata.getWord().isEmpty()) {
+                                tokenCount++;
+                                //// Sentence ids are not unique in Conll but need to be unqiue and sequetial in NAF
+                                //// We create a list with unique ids by combining with the Dunit (TITLE, BODY)
+                                String paragraphSentenceId = coNLLdata.getDunit() + "." + coNLLdata.getSentence();
+                                if (!paragraphSentenceIdList.contains(paragraphSentenceId))
+                                    paragraphSentenceIdList.add(paragraphSentenceId);
+                                KafWordForm kafWordForm = coNLLdata.toKafWordForm(tokenCount, paragraphSentenceIdList.size());
+                                //KafWordForm kafWordForm = coNLLdata.toKafWordForm();
+                                kafWordForm.setCharOffset(Integer.toString(rawText.length()));
+                                kafWordForm.setCharLength(Integer.toString(coNLLdata.getWord().length()));
+                                rawText += " " + coNLLdata.getWord();
+                                kafSaxParser.kafWordFormList.add(kafWordForm);
+                            }
+                            else {
+                                System.out.println("EMPTY WORD inputLine = " + inputLine);
+                            }
                         }
                     }
                     else {

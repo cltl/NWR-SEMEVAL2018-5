@@ -38,8 +38,9 @@ public class Task5EventCoref {
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
     static public void main(String[] args) {
-        String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data_final/NAFOUT";
-        String pathToConllFile = "/Users/piek/Desktop/SemEval2018/trial_data_final/s3/docs.conll";
+        String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data_final/NAFDONE";
+        String pathToConllFile = "/Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/docs.conll";
+        String eventFile = "/Users/piek/Desktop/SemEval2018/trial_vocabulary";
         MatchSettings matchSettings = new MatchSettings();
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
@@ -49,6 +50,9 @@ public class Task5EventCoref {
             else if (arg.equals("--conll-file") && args.length>(i+1)) {
                 pathToConllFile = args[i+1];
             }
+            else if (arg.equals("--event-file") && args.length>(i+1)) {
+                eventFile = args[i+1];
+            }
         }
         matchSettings.parseArguments(args);
         matchSettings.setLoose();
@@ -56,20 +60,26 @@ public class Task5EventCoref {
         System.out.println(matchSettings.getSettings());
         System.out.println("pathToConllFile = " + pathToConllFile);
         System.out.println("pathToTrigFiles = " + pathToTrigFiles);
+        System.out.println("eventFile = " + eventFile);
+        ArrayList<String> eventVocabulary = Util.ReadFileToStringArrayList(eventFile);
         File conllFileFolder = new File (pathToConllFile).getParentFile();
         File eckgFolder = new File (conllFileFolder.getAbsolutePath()+"/"+"eckg");
         if (!eckgFolder.exists()) eckgFolder.mkdir();
         File trigFolder = new File (pathToTrigFiles);
         /// STEP 1
         /// process all trig files and build the knowledge graphs
-        ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".trig");
+        ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".coref.trig");
         System.out.println("trigFiles.size() = " + trigFiles.size());
        // vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.readTripleFromTrigFiles(trigFiles);
         vu.cltl.triple.TrigTripleData trigTripleData = vu.cltl.triple.TrigTripleReader.readTripleFromTrigFiles(trigFiles);
-
+/*        if (trigTripleData.tripleMapInstances.containsKey("http://www.newsreader-project.eu/data/semeval2018-5/4ca1cbd3f6ffdda10a145ea48b31c96b#ev34")) {
+            ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get("http://www.newsreader-project.eu/data/semeval2018-5/4ca1cbd3f6ffdda10a145ea48b31c96b#ev34");
+            System.out.println("http://www.newsreader-project.eu/data/semeval2018-5/4ca1cbd3f6ffdda10a145ea48b31c96b#ev34");
+            System.out.println("statements.size() = " + statements.size());
+        }*/
         /// STEP 2
         /// from the complete graph we extract all events that match the domain constraints
-        ArrayList<String> domainEvents = EventTypes.getEventSubjectUris(trigTripleData.tripleMapInstances);
+        ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances, eventVocabulary);
         HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         System.out.println("eckgMap = " + eckgMap.size());
@@ -105,15 +115,8 @@ public class Task5EventCoref {
                 System.out.println("MERGED = " + (eventIds.size()-containerEvents.size()));
             }
             finalEvents.putAll(containerEvents);
-                       //// Dump the ECKGs
-           try {
-/*               OutputStream fos1 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".csv");
-               OutputStream fos2 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".eckg");
-               TrigUtil.printCountedKnowledgeGraph(fos2, containerEvents);
-               TrigUtil.printCountedKnowledgeGraphCsv(fos1, containerEvents);
-               fos1.close();
-               fos2.close();*/
-
+            //// Dump the ECKGs
+            try {
                OutputStream fos3 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".trig");
                Dataset dataset = TDBFactory.createDataset();
                TrigUtil.prefixDefaultModels(dataset);
@@ -123,10 +126,9 @@ public class Task5EventCoref {
                TrigUtil.addStatementsToJenaData(dataset, seckgContainerEvent);
                RDFDataMgr.write(fos3, dataset.getDefaultModel(), RDFFormat.TRIG_PRETTY);
                fos3.close();
-
-           } catch (IOException e) {
+            } catch (IOException e) {
                e.printStackTrace();
-           }
+            }
         }
         /// STEP 5 CREATE THE CONLL FILE
         createSystemConllFile(finalEvents, pathToConllFile);

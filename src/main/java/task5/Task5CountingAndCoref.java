@@ -55,7 +55,7 @@ public class Task5CountingAndCoref {
         /// process all trig files and build the knowledge graphs
         ArrayList<File> trigFiles = Util.makeRecursiveFileList(new File(pathToTrigFiles), ".trig");
         vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.simpleRdfReader(trigFiles);
-        ArrayList<String> domainEvents = EventTypes.getEventSubjectUris(trigTripleData.tripleMapInstances);
+        ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances, new ArrayList<String>());
         HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         System.out.println("eckgMap = " + eckgMap.size());

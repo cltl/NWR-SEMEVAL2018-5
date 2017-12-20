@@ -28,8 +28,8 @@ import static objects.EventTypes.eventKillMatch;
  */
 public class Task5Counting {
 
-    static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/s2/questions.json " +
-            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/s3/eckg --subtask s2";
+    static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s2/questions.json " +
+            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/eckg --subtask s2";
     static ArrayList<String> allEventKeys = new ArrayList<>();
     static String subtask = "s1"; // s2, s3
 

@@ -149,20 +149,24 @@ public class ConllOutputFromSem {
                             str += inputLine+"\n";
                         }
                         else {
-                            String tag = "-";
-                            tokenCount++;
-                            ///the format needs to be identical to Task5EventCoref:getTokenEventMap
-                            String tokenId = fileName+":w"+tokenCount;
-                            if (tokenEventMap.containsKey(tokenId)) {
-                                //tokenId = 00a4747ab229a2ea49288743a55ab22b:w776  filename+NAF token identifier
-                                String eventId = tokenEventMap.get(tokenId);
-                                Integer intId = Util.getEventId(eventId, allEventKeys);
-                                tag= "("+intId.toString()+")";
+                            if (!coNLLdata.getWord().isEmpty()) {
+                                String tag = "-";
+                                tokenCount++;
+                                ///the format needs to be identical to Task5EventCoref:getTokenEventMap
+                                String tokenId = fileName + ":w" + tokenCount;
+                                if (tokenEventMap.containsKey(tokenId)) {
+                                    //tokenId = 00a4747ab229a2ea49288743a55ab22b:w776  filename+NAF token identifier
+                                    String eventId = tokenEventMap.get(tokenId);
+                                    Integer intId = Util.getEventId(eventId, allEventKeys);
+                                    tag = "(" + intId.toString() + ")";
+                                } else {
+                                    ///////
+                                }
+                                str += coNLLdata.toConll(tag);
                             }
                             else {
-                               ///////
+
                             }
-                            str += coNLLdata.toConll(tag);
                         }
                     }
                     else {}

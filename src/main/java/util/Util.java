@@ -3,10 +3,7 @@ package util;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 
 /**
@@ -98,6 +95,41 @@ public class Util {
         return jsonObject;
     }
 
+    static public boolean isEventKey (String eventKey) {
+        int idx_s = eventKey.indexOf("#");
+        int idx_e = eventKey.lastIndexOf("#");
+        if (idx_s == idx_e && idx_s>-1) {
+            return true;
+        }
+        else if (eventKey.indexOf("/non-entities/")>-1) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    static public ArrayList<String> ReadFileToStringArrayList(String fileName) {
+        ArrayList<String> list = new ArrayList<String>();
+        if (new File (fileName).exists() ) {
+            try {
+                FileInputStream fis = new FileInputStream(fileName);
+                InputStreamReader isr = new InputStreamReader(fis);
+                BufferedReader in = new BufferedReader(isr);
+                String inputLine;
+                while (in.ready()&&(inputLine = in.readLine()) != null) {
+                    //System.out.println(inputLine);
+                    if (inputLine.trim().length()>0) {
+                        list.add(inputLine);
+                    }
+                }
+                in.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return list;
+    }
     static public ArrayList<File> makeRecursiveFileList(File inputFile, String filter) {
         ArrayList<File> acceptedFileList = new ArrayList<File>();
         File[] theFileList = null;

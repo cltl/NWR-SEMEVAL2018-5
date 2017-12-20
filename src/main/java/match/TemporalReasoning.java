@@ -8,22 +8,31 @@ import java.util.*;
 
 public class TemporalReasoning {
 
-    static final int minYear = 2000;
-    static final int maxYear = 2017;
 
     static public HashMap<String, ArrayList<String>> getTemporalContainers (
             HashMap<String, ArrayList<Statement>> eckgMap,
             HashMap<String, ArrayList<Statement>> seckgMap,
             MatchSettings matchSettings) {
+        boolean DEBUG = false;
         HashMap<String, ArrayList<String>> map = new HashMap<String, ArrayList<String>>();
         Set keySet = eckgMap.keySet();
         Iterator<String> keys = keySet.iterator();
         while (keys.hasNext()) {
            String eventKey = keys.next();
            String timeString = "";
+            /*if (eventKey.endsWith("e1e2f54c3fb0c19ac3f9c4c3857269d5#ev1")) {
+                System.out.println("eventKey = " + eventKey);
+                DEBUG = true;
+            }
+            else {
+                DEBUG = false;
+            }*/
            if (seckgMap.containsKey(eventKey)) {
                ArrayList<Statement> secondaryStatements = seckgMap.get(eventKey);
-               ArrayList<Time> dominantDates = getDominantTimeStrings(secondaryStatements);
+               if (DEBUG) {
+                   System.out.println("secondaryStatements = " + secondaryStatements.size());
+               }
+               ArrayList<Time> dominantDates = getDominantTimeStrings(secondaryStatements, DEBUG);
                if (dominantDates.size()>0) {
                    if (matchSettings.isDay()) {
                        timeString = dominantDates.get(0).toYearMonthDayString();
@@ -32,6 +41,19 @@ public class TemporalReasoning {
                        timeString = dominantDates.get(0).toYearMonthString();
                    }
                }
+               else {
+                   if (DEBUG) {
+                       System.out.println("no dominantDates for:" + eventKey);
+                   }
+               }
+           }
+           else {
+               if (DEBUG) {
+                   System.out.println("no secundary information for:" + eventKey);
+               }
+           }
+        if (DEBUG) {
+               System.out.println("e1e2f54c3fb0c19ac3f9c4c3857269d5#ev10 timeString:" + timeString);
            }
            if (timeString.isEmpty()) {
                timeString = "NOTIME";
@@ -50,7 +72,7 @@ public class TemporalReasoning {
         return map;
     }
 
-    static ArrayList<Time> getDominantTimeStrings (ArrayList<Statement> statements) {
+    static ArrayList<Time> getDominantTimeStrings (ArrayList<Statement> statements, boolean DEBUG) {
             //nwr:tmx1	inDateTime	20170131
             //nwr:tmx1	inDateTime	201701
             //nwr:tmx1	inDateTime	2017
@@ -77,7 +99,13 @@ public class TemporalReasoning {
         ArrayList<Time> timeArrayList = new ArrayList<Time>();
         for (int i = 0; i < statements.size(); i++) {
             Statement statement = statements.get(i);
-            if (statement.getPredicate().getLocalName().equals("inDateTime")) {
+            if (DEBUG) {
+                System.out.println("statement.getPredicate().getLocalName() = " + statement.getPredicate().getLocalName());
+            }
+            if (    statement.getPredicate().getLocalName().equals("inDateTime") ||
+                    statement.getPredicate().getLocalName().equals("hasBeginning") ||
+                    statement.getPredicate().getLocalName().equals("hasEnd")
+                    ) {
                 String timeString = TrigUtil.getPrettyNSValue(statement.getObject().toString());
                 Time time = new Time();
                // System.out.println("timeString = " + timeString);
@@ -95,15 +123,13 @@ public class TemporalReasoning {
                     /// we have a problem
                 }
                 if (time.getYear() != 0) {
-                    if (time.getYear() >= minYear && time.getYear() <= maxYear) {
-                        timeArrayList.add(time);
-                        if (years.containsKey(time.getYear())) {
-                            Integer cnt = years.get(time.getYear());
-                            cnt++;
-                            years.put(time.getYear(), cnt);
-                        } else {
-                            years.put(time.getYear(), 1);
-                        }
+                    timeArrayList.add(time);
+                    if (years.containsKey(time.getYear())) {
+                        Integer cnt = years.get(time.getYear());
+                        cnt++;
+                        years.put(time.getYear(), cnt);
+                    } else {
+                        years.put(time.getYear(), 1);
                     }
                 }
             }
@@ -134,6 +160,7 @@ public class TemporalReasoning {
         sortHashMap(years);
         sortHashMap(months);
         sortHashMap(days);*/
+
         return timeArrayList;
     }
 
