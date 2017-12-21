@@ -36,6 +36,29 @@ public class Questiondata {
      },
      "verbose_question": "How many people were killed in 01/2017 (month) in ('California',) (state) ?"
      },
+
+     "2-7136": {
+         "event_type": "killing",
+         "participant": {
+             "first": "Robert"
+         },
+         "subtask": 2,
+         "time": {
+             "year": "2017"
+         },
+         "verbose_question": "How many ['killing'] events happened in 2017 (year) that involve the name Robert (first) ?"
+     },
+     "2-7138": {
+         "event_type": "killing",
+         "participant": {
+             "last": "Branch"
+         },
+         "subtask": 2,
+         "time": {
+             "month": "01/2017"
+         },
+         "verbose_question": "How many ['killing'] events happened in 01/2017 (month) that involve the name Branch (last) ?"
+     },
      */
 
     String id;
@@ -192,6 +215,22 @@ public class Questiondata {
 
     public void setVerbose_question(String verbose_question) {
         this.verbose_question = verbose_question;
+    }
+
+    public String getParticipant_first() {
+        return participant_first;
+    }
+
+    public void setParticipant_first(String participant_first) {
+        this.participant_first = participant_first;
+    }
+
+    public String getParticipant_last() {
+        return participant_last;
+    }
+
+    public void setParticipant_last(String participant_last) {
+        this.participant_last = participant_last;
     }
 
     public String toString() {

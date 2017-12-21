@@ -18,9 +18,9 @@ cp $QUESTIONPATH/s3/docs.conll.result $SUBMISSION/s1/docs.conll
 cp $QUESTIONPATH/s3/docs.conll.result $SUBMISSION/s2/docs.conll
 cp $QUESTIONPATH/s3/docs.conll.result $SUBMISSION/s3/docs.conll
 
-cp $QUESTIONPATH1/s1/answers.json $SUBMISSION/s1/
-cp $QUESTIONPATH2/s2/answers.json $SUBMISSION/s2/
-cp $QUESTIONPATH3/s3/answers.json $SUBMISSION/s3/
+cp $QUESTIONPATH/s1/answers.json $SUBMISSION/s1/
+cp $QUESTIONPATH/s2/answers.json $SUBMISSION/s2/
+cp $QUESTIONPATH/s3/answers.json $SUBMISSION/s3/
 
 cd $SUBMISSION
 zip -r submission.zip *
