@@ -3,6 +3,7 @@ package task5;
 import com.hp.hpl.jena.rdf.model.Statement;
 import match.TrigReader;
 import objects.ParticipantTypes;
+import objects.Space;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.json.simple.JSONObject;
 import question.Questiondata;
@@ -27,6 +28,7 @@ import static objects.EventTypes.eventKillMatch;
  */
 public class Task5Counting {
 
+    static public boolean LOGGING = false;
     static OutputStream locationlog = null;
     static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/questions.json " +
             "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/eckg --subtask s3";
@@ -34,11 +36,7 @@ public class Task5Counting {
     static String subtask = "s1"; // s2, s3
 
     static public void main(String[] args) {
-        try {
-            locationlog = new FileOutputStream("locationlog");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+
         String pathToQuestionFile = "";
         String pathToEckgFiles = "";
         String taskFolder = "";
@@ -57,8 +55,17 @@ public class Task5Counting {
             else if (arg.equals("--task") && args.length>(i+1)) {
                 taskFolder = args[i+1];
             }
+            else if (arg.equals("--log")) {
+                LOGGING = true;
+            }
         }
-
+        if (LOGGING) {
+            try {
+                locationlog = new FileOutputStream("locationlog");
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
         ArrayList<File> eckgFiles = Util.makeRecursiveFileList(new File(pathToEckgFiles), ".trig");
         if (!taskFolder.isEmpty()) {
             subtask = "s1";
@@ -74,10 +81,12 @@ public class Task5Counting {
         else {
             performSubtask(eckgFiles, pathToQuestionFile, subtask);
         }
-        try {
-            locationlog.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (LOGGING) {
+            try {
+                locationlog.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -106,7 +115,9 @@ public class Task5Counting {
                    for (int i = 0; i < eckgFiles.size(); i++) {
                        File eckGFile = eckgFiles.get(i);
                        if (eckGFile.getName().startsWith(dataString)) {
-                           /// by using startWith, we ensure that constraints for just the year or month still match with 
+                           /// by using startWith,
+                           // we ensure that constraints for just the year or month
+                           // still match with
                            myTrigFiles.add(eckGFile);
                        }
                        else { ///////
@@ -114,7 +125,6 @@ public class Task5Counting {
                    }
                    System.out.println("myTrigFiles.size() = " + myTrigFiles.size());
                    vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.simpleRdfReader(myTrigFiles);
-                 //  ArrayList<String> eventKeys = getAllEventKeys(trigTripleData);
                    ArrayList<String> eventKeys = getQuestionDataEventKeys(trigTripleData, questiondata);
                    System.out.println("Nr. of incidents = " + eventKeys.size());
 
@@ -373,46 +383,97 @@ public class Task5Counting {
         return HUMAN;
     }
 
+    /**
+     * Restricted version where the relation has to hasActor or hasPlace (which is almost everything)
+     * @param questiondata
+     * @param statements
+     * @param trigTripleData
+     * @return
+     */
     static boolean checkLocation (Questiondata questiondata, ArrayList<Statement> statements, TrigTripleData trigTripleData) {
         if (questiondata.getCity().isEmpty() && questiondata.getState().isEmpty()) {
             return true;
         }
+        ArrayList<String> dbpediaTargetObjects = new ArrayList<>();
         for (int i = 0; i < statements.size(); i++) {
             Statement statement = statements.get(i);
             if (statement.getPredicate().getLocalName().equals("hasActor") ||
                 statement.getPredicate().getLocalName().equals("hasPlace")) {
                 if (statement.getObject().toString().equals(questiondata.getCity()) ||
                         statement.getObject().toString().equals(questiondata.getState())) {
+                    System.out.println("LOCATION MATCH:"+statement.getObject().toString());
                     return true;
                 }
                 else {
+                    /// we add this as a possible target for dbp location sparql
+                    if (statement.getObject().toString().indexOf("dbpedia")>-1 ) {
+                      if (!dbpediaTargetObjects.contains(statement.getObject().toString())) {
+                          dbpediaTargetObjects.add(statement.getObject().toString());
+                      }
+                    }
                     if (trigTripleData.tripleMapInstances.containsKey(statement.getObject().toString())) {
                         ArrayList<Statement> statementArrayList = trigTripleData.tripleMapInstances.get(statement.getObject().toString());
                         for (int j = 0; j < statementArrayList.size(); j++) {
                             Statement objectStatement = statementArrayList.get(j);
                             if (objectStatement.getPredicate().getLocalName().equals("type")) {
                                 /////    <http://dbpedia.org/resource/Colton,_California>
-                                /////       a  <http://dbpedia.org/resource/Colton,_California> , nwrontology:MISC , nwrontology:LOC , <http://dbpedia.org/resource/Colton,_Staffordshire> , <http://dbpedia.org/resource/Colton,_Washington> , <http://dbpedia.org/resource/Colton,_New_York> , <http://dbpedia.org/resource/Colton,_Leeds> , <http://dbpedia.org/resource/Colton,_Utah> , <http://dbpedia.org/resource/Electoral_district_of_Colton> , <http://dbpedia.org/resource/Colton,_Cumbria> , nwrontology:ORG ;
+                                /////       a  <http://dbpedia.org/resource/Colton,_California> ,
+                                // nwrontology:MISC , nwrontology:LOC ,
+                                // <http://dbpedia.org/resource/Colton,_Staffordshire> ,
+                                // <http://dbpedia.org/resource/Colton,_Washington> ,
+                                // <http://dbpedia.org/resource/Colton,_New_York> ,
+                                // <http://dbpedia.org/resource/Colton,_Leeds> ,
+                                // <http://dbpedia.org/resource/Colton,_Utah> ,
+                                // <http://dbpedia.org/resource/Electoral_district_of_Colton> ,
+                                // <http://dbpedia.org/resource/Colton,_Cumbria> , nwrontology:ORG ;
                                 if (objectStatement.getObject().toString().equals(questiondata.getCity()) ||
                                         objectStatement.getObject().toString().equals(questiondata.getState())) {
+                                    System.out.println("LOCATION MATCH:"+statement.getObject().toString());
                                                     return true;
+                                }
+                                else {
+                                    /// we add this one as well as a possible target for dbp location sparql
+                                    if (objectStatement.getObject().toString().indexOf("dbpedia")>-1 ) {
+                                      if (!dbpediaTargetObjects.contains(objectStatement.getObject().toString())) {
+                                          dbpediaTargetObjects.add(objectStatement.getObject().toString());
+                                      }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                if (statement.getPredicate().getLocalName().equals("hasPlace") && statement.getObject().toString().indexOf("dbpedia")>-1 ) {
-                    String str =  "LOCATION MISMATCH:\n";
-                    str += "questiondata State = " + questiondata.getState()+"\n";
-                    str += "questiondata City = " + questiondata.getCity()+"\n";
-                    str += "statement.getObject().toString() = " + statement.getObject().toString()+"\n";
-                    try {
-                        locationlog.write(str.getBytes());
-                    } catch (IOException e) {
-                        e.printStackTrace();
+
+                ///// At this point we have no match,
+
+                if (LOGGING) {
+                    if (statement.getPredicate().getLocalName().equals("hasPlace") && statement.getObject().toString().indexOf("dbpedia") > -1) {
+                        String str = "LOCATION MISMATCH:\n";
+                        str += "questiondata State = " + questiondata.getState() + "\n";
+                        str += "questiondata City = " + questiondata.getCity() + "\n";
+                        str += "statement.getObject().toString() = " + statement.getObject().toString() + "\n";
+                        try {
+                            locationlog.write(str.getBytes());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
             }
+        }
+        //System.out.println("dbpediaTargetObjects.size() = " + dbpediaTargetObjects.size());
+        if (dbpediaTargetObjects.size()>0) {
+            ArrayList<String> matchingLocations = new ArrayList<>();
+           if (!questiondata.getCity().isEmpty()) {
+               matchingLocations = Space.spaceRelated("<"+questiondata.getCity()+">", dbpediaTargetObjects);
+           }
+           if (!questiondata.getState().isEmpty()) {
+               matchingLocations.addAll(Space.spaceRelated("<"+questiondata.getState()+">", dbpediaTargetObjects));
+           }
+           if (matchingLocations.size()>0) {
+               System.out.println("INDIRECT LOCATION MATCH:"+matchingLocations.toString());
+               return true;
+           }
         }
         return false;
     }

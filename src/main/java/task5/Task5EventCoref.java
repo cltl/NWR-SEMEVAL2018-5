@@ -70,17 +70,14 @@ public class Task5EventCoref {
         File eckgFolder = new File (conllFileFolder.getAbsolutePath()+"/"+"eckg");
         if (!eckgFolder.exists()) eckgFolder.mkdir();
         File trigFolder = new File (pathToTrigFiles);
+
         /// STEP 1
         /// process all trig files and build the knowledge graphs
         ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".coref.trig");
         System.out.println("trigFiles.size() = " + trigFiles.size());
-       // vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.readTripleFromTrigFiles(trigFiles);
+
         vu.cltl.triple.TrigTripleData trigTripleData = vu.cltl.triple.TrigTripleReader.readTripleFromTrigFiles(trigFiles);
-/*        if (trigTripleData.tripleMapInstances.containsKey("http://www.newsreader-project.eu/data/semeval2018-5/4ca1cbd3f6ffdda10a145ea48b31c96b#ev34")) {
-            ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get("http://www.newsreader-project.eu/data/semeval2018-5/4ca1cbd3f6ffdda10a145ea48b31c96b#ev34");
-            System.out.println("http://www.newsreader-project.eu/data/semeval2018-5/4ca1cbd3f6ffdda10a145ea48b31c96b#ev34");
-            System.out.println("statements.size() = " + statements.size());
-        }*/
+
         /// STEP 2
         /// from the complete graph we extract all events that match the domain constraints
         ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances, eventVocabulary);
@@ -155,7 +152,6 @@ public class Task5EventCoref {
     //     <http://www.newsreader-project.eu/data/semeval2018-5/4f78f01eadd1fc9e9d4795f1888e18fb#
     // char=297,308&word=w2003004,w2003005,w2003006&
     // term=t59,t60,t61&sentence=3&paragraph=2> ;
-
     static ArrayList<String> getTokenIdsFromMention (String mention) {
         ArrayList<String> ids = new ArrayList<>();
         String [] fields = mention.split("&");
@@ -198,19 +194,16 @@ public class Task5EventCoref {
         Iterator<String> keys = keySet.iterator();
         while (keys.hasNext()) {
             String eventKey = keys.next();
-           // System.out.println("eventKey = " + eventKey);
             if (!allEventKeys.contains(eventKey)) allEventKeys.add(eventKey);
             ArrayList<Statement> directStatements = kGraph.get(eventKey);
             for (int j = 0; j < directStatements.size(); j++) {
                 Statement statement = directStatements.get(j);
                 if (statement.getPredicate().getLocalName().equals("denotedBy")) {
                     String mention = statement.getObject().toString();
-                    //System.out.println("mention = " + mention);
                     String fileName = getFileNameFromMention(mention);
                     ArrayList<String> tokenList = getTokenIdsFromMention(mention);
                     for (int t = 0; t < tokenList.size(); t++) {
                         String tokenId = fileName+":"+tokenList.get(t);
-                       // System.out.println("tokenId = " + tokenId);
                         tokenEventMap.put(tokenId, eventKey);
                     }
                 }

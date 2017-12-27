@@ -70,17 +70,13 @@ public class Task5EventCorefVersion2 {
         File eckgFolder = new File (conllFileFolder.getAbsolutePath()+"/"+"eckg");
         if (!eckgFolder.exists()) eckgFolder.mkdir();
         File trigFolder = new File (pathToTrigFiles);
+
         /// STEP 1
         /// process all trig files and build the knowledge graphs
         ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".coref.trig");
         System.out.println("trigFiles.size() = " + trigFiles.size());
-       // vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.readTripleFromTrigFiles(trigFiles);
         vu.cltl.triple.TrigTripleData trigTripleData = vu.cltl.triple.TrigTripleReader.readTripleFromTrigFiles(trigFiles);
-/*        if (trigTripleData.tripleMapInstances.containsKey("http://www.newsreader-project.eu/data/semeval2018-5/4ca1cbd3f6ffdda10a145ea48b31c96b#ev34")) {
-            ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get("http://www.newsreader-project.eu/data/semeval2018-5/4ca1cbd3f6ffdda10a145ea48b31c96b#ev34");
-            System.out.println("http://www.newsreader-project.eu/data/semeval2018-5/4ca1cbd3f6ffdda10a145ea48b31c96b#ev34");
-            System.out.println("statements.size() = " + statements.size());
-        }*/
+
         /// STEP 2
         /// from the complete graph we extract all events that match the domain constraints
         ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances, eventVocabulary);
@@ -97,7 +93,7 @@ public class Task5EventCorefVersion2 {
 
 
         /// STEP 4 CROSSDOC EVENT COREF WITHIN CONTAINERS
-          /// This will carry out cross-document event coreference for all events that belong to the same domain
+        /// This will carry out cross-document event coreference for all events that belong to the same domain
         System.out.println("temporalContainers.size() = " + temporalContainers.size());
         Set containerSet = temporalContainers.keySet();
         Iterator<String> containerKeys = containerSet.iterator();

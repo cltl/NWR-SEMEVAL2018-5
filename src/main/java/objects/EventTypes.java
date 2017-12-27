@@ -20,13 +20,32 @@ public class EventTypes {
     static final String HIT = "HIT";
     static final String INCIDENT = "INCIDENT";
 
+    static final String[] incidentTypes = {"eso:Attacking", "eso:Destroying", "fn:Attack", "fn:Catastrophe", "fn:Cause_harm","fn:Destroying"};
+
+    static final String[] killTypes = {"eso:BeingInExistence",  "eso:Destroying",
+                "eso:Killing", "fn:Cause_to_end",
+                "fn:Death", "fn:Destroying", "fn:Existence",
+                "fn:Killing"};
+
+    static final String[] injuredTypes = { "eso:Damaging", "eso:Injuring",
+                 "fn:Cause_harm", "fn:Cause_impact",
+                "fn:Experience_bodily_harm", "fn:Hit_target",
+                "fn:Recovery", "fn:Resurrection"};
+
+    static final String[] hitTypes = { "fn:Cause_impact","fn:Hit_target"};
+
+    static final String[] shootTypes = { "fn:Shoot_projectiles", "fn:Use_firearm","fn:Firing"};
+
     static ArrayList<String> killWords = new ArrayList<>();
     static ArrayList<String> incidentWords = new ArrayList<>();
     static ArrayList<String> shootWords = new ArrayList<>();
     static ArrayList<String> hitWords = new ArrayList<>();
     static ArrayList<String> injureWords = new ArrayList<>();
 
-
+    /**
+     * We need to initialise the vocabulary of words with their event type
+     * @param wordMap
+     */
   static public void initVocabulary(HashMap<String, String> wordMap) {
       Set keyset = wordMap.keySet();
       Iterator<String> keys = keyset.iterator();
@@ -51,21 +70,6 @@ public class EventTypes {
       }
   }
 
-  static final String[] incidentTypes = {"eso:Attacking", "eso:Destroying", "fn:Attack", "fn:Catastrophe", "fn:Cause_harm","fn:Destroying"};
-
-    static final String[] killTypes = {"eso:BeingInExistence",  "eso:Destroying",
-            "eso:Killing", "fn:Cause_to_end",
-            "fn:Death", "fn:Destroying", "fn:Existence",
-            "fn:Killing"};
-
-    static final String[] injuredTypes = { "eso:Damaging", "eso:Injuring",
-             "fn:Cause_harm", "fn:Cause_impact",
-            "fn:Experience_bodily_harm", "fn:Hit_target",
-            "fn:Recovery", "fn:Resurrection"};
-
-    static final String[] hitTypes = { "fn:Cause_impact","fn:Hit_target"};
-
-    static final String[] shootTypes = { "fn:Shoot_projectiles", "fn:Use_firearm","fn:Firing"};
 
     public static boolean isType(String type) {
        // System.out.println("type = " + type);

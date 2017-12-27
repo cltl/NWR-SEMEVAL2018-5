@@ -145,23 +145,6 @@ public class EventIdentity {
         }
     }
 
-    static ArrayList<Statement> getNewStatements (ArrayList<Statement>statements2, ArrayList<Statement> statements1) {
-        ArrayList<Statement> newStatements = new ArrayList<>();
-        for (int i = 0; i < statements1.size(); i++) {
-            Statement statement1 = statements1.get(i);
-            boolean match = false;
-            for (int j = 0; j < statements2.size(); j++) {
-                Statement statement2 = statements2.get(j);
-                if (statement1.toString().equals(statement2.toString())) {
-                    match = true;
-                    break;
-                }
-            }
-            if (!match) newStatements.add(statement1);
-        }
-        return newStatements;
-    }
-
     static boolean identityStatement (Statement statement, MatchSettings matchSettings) {
         if (matchSettings.isMatchAny()) return true;
         if (matchSettings.isMatchDbpActor()) return dbpParticipant(statement);
