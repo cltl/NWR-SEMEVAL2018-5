@@ -5,6 +5,7 @@ import org.json.simple.parser.JSONParser;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Created by piek on 09/11/2017.
@@ -130,6 +131,34 @@ public class Util {
         }
         return list;
     }
+
+    static public HashMap<String, String> ReadFileToStringHashMap(String fileName) {
+        HashMap<String, String> map = new HashMap<>();
+        if (new File (fileName).exists() ) {
+            try {
+                FileInputStream fis = new FileInputStream(fileName);
+                InputStreamReader isr = new InputStreamReader(fis);
+                BufferedReader in = new BufferedReader(isr);
+                String inputLine;
+                while (in.ready()&&(inputLine = in.readLine()) != null) {
+                    //System.out.println(inputLine);
+                    if (inputLine.trim().length()>0) {
+                        String[] fields = inputLine.trim().split("\t");
+                        if (fields.length==2) {
+                            String word = fields[0];
+                            String type = fields[1];
+                            map.put(word, type);
+                        }
+                    }
+                }
+                in.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return map;
+    }
+
     static public ArrayList<File> makeRecursiveFileList(File inputFile, String filter) {
         ArrayList<File> acceptedFileList = new ArrayList<File>();
         File[] theFileList = null;

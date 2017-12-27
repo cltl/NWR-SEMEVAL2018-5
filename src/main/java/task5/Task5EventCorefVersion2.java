@@ -33,7 +33,7 @@ import java.util.Set;
  * It stores the ECKG to disk and annotates the CoNLL file with event mentions and coreference relations.
  * We are now dealing with one big CoNLL file instead of many separate files.
  */
-public class Task5EventCoref {
+public class Task5EventCorefVersion2 {
 
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
