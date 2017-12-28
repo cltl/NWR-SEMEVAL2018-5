@@ -1,13 +1,57 @@
 package match;
 
+import com.hp.hpl.jena.query.Dataset;
+import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.rdf.model.StmtIterator;
+import com.hp.hpl.jena.tdb.TDBFactory;
 import objects.Time;
+import org.apache.jena.riot.RDFDataMgr;
 import vu.cltl.triple.TrigUtil;
 
+import java.io.File;
 import java.util.*;
 
 public class TemporalReasoning {
 
+    static public HashMap<String, ArrayList<File>> getTemporalContainersWithTrigFiles (ArrayList<File> trigFiles) {
+        HashMap<String, ArrayList<File>> containers = new HashMap<>();
+        for (int i = 0; i < trigFiles.size(); i++) {
+            File trigFile = trigFiles.get(i);
+            String documentCreationTime = getDocumentCreationTime(trigFile);
+            if (containers.containsKey(documentCreationTime)) {
+                ArrayList<File> files= containers.get(documentCreationTime);
+                files.add(trigFile);
+                containers.put(documentCreationTime, files);
+            }
+            else {
+                ArrayList<File> files= new ArrayList<>();
+                files.add(trigFile);
+                containers.put(documentCreationTime, files);
+            }
+        }
+        return containers;
+    }
+
+    static public String getDocumentCreationTime(File trigFile) {
+        String dct = "NODCT";
+        Dataset dataset = TDBFactory.createDataset();
+        dataset = RDFDataMgr.loadDataset(trigFile.getAbsolutePath());
+        Model namedModel = dataset.getDefaultModel();
+        StmtIterator siter = namedModel.listStatements();
+        while (siter.hasNext()) {
+            Statement s = siter.nextStatement();
+            String subject = s.getSubject().getURI();
+            if (subject.endsWith("#tmx0")) {
+               if (s.getPredicate().getLocalName().equals("inDateTime")) {
+                   dct = s.getObject().asResource().getLocalName();
+                   break;
+               }
+            }
+        }
+        dataset.close();
+        return dct;
+    }
 
     static public HashMap<String, ArrayList<String>> getTemporalContainers (
             HashMap<String, ArrayList<Statement>> eckgMap,

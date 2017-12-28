@@ -2,7 +2,7 @@ package task5;
 
 import com.hp.hpl.jena.rdf.model.Statement;
 import match.TrigReader;
-import objects.ParticipantTypes;
+import objects.Participants;
 import objects.Space;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.json.simple.JSONObject;
@@ -31,10 +31,9 @@ public class Task5Counting {
     static public boolean LOGGING = false;
     static OutputStream locationlog = null;
     static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/questions.json " +
-            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/eckg --subtask s3";
-    static ArrayList<String> allEventKeys = new ArrayList<>();
+            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/eckg --subtask s3" +
+            " --cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel --states /Users/piek/Desktop/SemEval2018/scripts/states.rel";
     static String subtask = "s1"; // s2, s3
-
     static public void main(String[] args) {
 
         String pathToQuestionFile = "";
@@ -54,6 +53,14 @@ public class Task5Counting {
             }
             else if (arg.equals("--task") && args.length>(i+1)) {
                 taskFolder = args[i+1];
+            }
+            else if (arg.equals("--cities") && args.length>(i+1)) {
+                String cityLex = args[i+1];
+                Space.initCities(new File (cityLex));
+            }
+            else if (arg.equals("--states") && args.length>(i+1)) {
+                String stateLex = args[i+1];
+                Space.initStates(new File (stateLex));
             }
             else if (arg.equals("--log")) {
                 LOGGING = true;
@@ -286,24 +293,7 @@ public class Task5Counting {
             String key = events.get(i);
             ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get(key);
             if (checkType(questiondata, statements) && checkLocation(questiondata, statements, trigTripleData)) {
-                for (int j = 0; j < statements.size(); j++) {
-                    Statement statement = statements.get(j);
-                    String participantUri = "";
-                    if (statement.getPredicate().getLocalName().equalsIgnoreCase("a0")) {
-                       // participantUri = statement.getObject().asResource().getURI();
-                    }
-                    else if (statement.getPredicate().getLocalName().equalsIgnoreCase("a1")) {
-                        participantUri = statement.getObject().asResource().getURI();
-                    }
-                    if (!participantUri.isEmpty()) {
-                        /// check for HUMAN
-                        if (isHumanEntity(participantUri, trigTripleData)) {
-                            if (!participants.contains(participantUri)) {
-                                participants.add(participantUri);
-                            }
-                        }
-                    }
-                }
+                participants = Participants.getEntityParticipants(trigTripleData, statements);
             }
         }
         //System.out.println("participants = " + participants.toString());
@@ -316,71 +306,11 @@ public class Task5Counting {
             String key = events.get(i);
             ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get(key);
             if (checkType(questiondata, statements) && checkLocation(questiondata, statements, trigTripleData)) {
-                for (int j = 0; j < statements.size(); j++) {
-                    Statement statement = statements.get(j);
-                    String participantUri = "";
-                    if (statement.getPredicate().getLocalName().equalsIgnoreCase("a1")) {
-                        participantUri = statement.getObject().asResource().getURI();
-                        /// check for HUMAN
-                        if (isHumanNonEntity(participantUri, trigTripleData)) {
-                            if (!participants.contains(participantUri)) {
-                                participants.add(participantUri);
-                            }
-                        }
-                    }
-                }
+                participants = Participants.getNonEntityParticipants(trigTripleData, statements);
             }
         }
         //System.out.println("participants = " + participants.toString());
         return participants;
-    }
-
-    static boolean isHumanEntity (String participantUri, TrigTripleData trigTripleData) {
-        boolean HUMAN = false;
-        boolean PLACE = false;
-        if (trigTripleData.tripleMapInstances.containsKey(participantUri)) {
-            ArrayList<Statement> participantStatements = trigTripleData.tripleMapInstances.get(participantUri);
-            for (int j = 0; j < participantStatements.size(); j++) {
-                Statement participantStatement = participantStatements.get(j);
-                if (participantStatement.getPredicate().getLocalName().equals("type")) {
-                    if (participantStatement.getObject().asResource().getLocalName().equals("PER")) {
-                        HUMAN = true;
-                    }
-                    else if (participantStatement.getObject().asResource().getLocalName().equals("LOC")) {
-                        PLACE = true;
-                    }
-                }
-            }
-        }
-        if (HUMAN && !PLACE) return true;
-        else return false;
-    }
-
-    static boolean isHumanNonEntity (String participantUri, TrigTripleData trigTripleData) {
-        boolean HUMAN = false;
-        if (trigTripleData.tripleMapInstances.containsKey(participantUri)) {
-            ArrayList<Statement> participantStatements = trigTripleData.tripleMapInstances.get(participantUri);
-            for (int j = 0; j < participantStatements.size(); j++) {
-                Statement participantStatement = participantStatements.get(j);
-                if (participantStatement.getPredicate().getLocalName().equals("prefLabel") ||
-                        participantStatement.getPredicate().getLocalName().equals("label")
-                    ) {
-                    String label = participantStatement.getObject().asLiteral().getLexicalForm();
-                    if (ParticipantTypes.isHumanLabel(label)) {
-                        HUMAN = true;
-                        System.out.println("label = " + label);
-                        break;
-                    }
-                    /*
-                    if (!label.toLowerCase().equals(label)) {
-                        System.out.println("label = " + label);
-                        HUMAN = true;
-                        break;
-                    }*/
-                }
-            }
-        }
-        return HUMAN;
     }
 
     /**
@@ -465,10 +395,10 @@ public class Task5Counting {
         if (dbpediaTargetObjects.size()>0) {
             ArrayList<String> matchingLocations = new ArrayList<>();
            if (!questiondata.getCity().isEmpty()) {
-               matchingLocations = Space.spaceRelated("<"+questiondata.getCity()+">", dbpediaTargetObjects);
+               matchingLocations = Space.spaceRelatedCityLexicon("<"+questiondata.getCity()+">", dbpediaTargetObjects);
            }
            if (!questiondata.getState().isEmpty()) {
-               matchingLocations.addAll(Space.spaceRelated("<"+questiondata.getState()+">", dbpediaTargetObjects));
+               matchingLocations.addAll(Space.spaceRelatedStateLexicon("<"+questiondata.getState()+">", dbpediaTargetObjects));
            }
            if (matchingLocations.size()>0) {
                System.out.println("INDIRECT LOCATION MATCH:"+matchingLocations.toString());

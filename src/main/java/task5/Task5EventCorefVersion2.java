@@ -75,21 +75,84 @@ public class Task5EventCorefVersion2 {
         /// process all trig files and build the knowledge graphs
         ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".coref.trig");
         System.out.println("trigFiles.size() = " + trigFiles.size());
-        vu.cltl.triple.TrigTripleData trigTripleData = vu.cltl.triple.TrigTripleReader.readTripleFromTrigFiles(trigFiles);
 
-        /// STEP 2
-        /// from the complete graph we extract all events that match the domain constraints
-        ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances, eventVocabulary);
-        HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
-        HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
-        System.out.println("eckgMap = " + eckgMap.size());
-        System.out.println("seckgMap = " + seckgMap.size());
-        System.out.println("domainEvents = " + domainEvents.size());
+        /// our first approach is event driven. Since we can expect one incident per source document, we probably can better
+        /// use the document as a starting point:
+        // 1. group documents per temporal container
+        // 2. compare documents for incident identity
+        // 3. lump incident level events and shoot events across all identical documents
+        // 4. link hit, kill and injure events to participants within and across all documents
+
+        /// We could create temporal containers from the questions or from the document creation time.
+
+        HashMap<String,ArrayList<File>> temporalContainers = TemporalReasoning.getTemporalContainersWithTrigFiles(trigFiles);
+
+        Set containerSet = temporalContainers.keySet();
+        Iterator<String> containerKeys = containerSet.iterator();
+        HashMap<String, ArrayList<Statement>> finalEvents = new HashMap<>();
+        while (containerKeys.hasNext()) {
+            String containerKey = containerKeys.next();
+            System.out.print("containerKey = " + containerKey+":");
+            ArrayList<File> timeTrigFiles = temporalContainers.get(containerKey);
+            /// now we need to deal with all the events in these trigfiles
+            /// get locations
+            /// get participants
+            /// compare trigfiles for location and participant match
+            /// if so merge events mentions accordingly but make sure hit, kill and injury are participant sensitive
+
+
+            /// we get all triples from these trigfiles that share the same temporal container
+            vu.cltl.triple.TrigTripleData trigTripleData = vu.cltl.triple.TrigTripleReader.readTripleFromTrigFiles(timeTrigFiles);
+
+            /// from the complete graph we extract all events that match the domain constraints
+            ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances, eventVocabulary);
+            HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
+            HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
+            System.out.println("eckgMap = " + eckgMap.size());
+            System.out.println("seckgMap = " + seckgMap.size());
+            System.out.println("domainEvents = " + domainEvents.size());
+
+            /// we need to build some similarity function that compares the events across the trigfiles with the same DCT
+            HashMap<String, ArrayList<Statement>> containerEvents = EventIdentity.lookForSimilarEvents(
+                                domainEvents,
+                                eckgMap,
+                                seckgMap,
+                                matchSettings);
+            if (domainEvents.size()==containerEvents.size()) {
+                //System.out.println("NO MERGE");
+                System.out.println();
+            }
+            else {
+                System.out.println("MERGED = " + (domainEvents.size()-containerEvents.size()));
+            }
+
+            finalEvents.putAll(containerEvents);
+            //// Dump the ECKGs
+           try {
+              OutputStream fos3 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".trig");
+              Dataset dataset = TDBFactory.createDataset();
+              TrigUtil.prefixDefaultModels(dataset);
+              ArrayList<String> containerEventKeys = new ArrayList<>(containerEvents.keySet());
+              HashMap<String, ArrayList<Statement>> seckgContainerEvent = TrigUtil.getSecondaryKnowledgeGraphHashMap( containerEventKeys,trigTripleData);
+              TrigUtil.addStatementsToJenaData(dataset, containerEvents);
+              TrigUtil.addStatementsToJenaData(dataset, seckgContainerEvent);
+              RDFDataMgr.write(fos3, dataset.getDefaultModel(), RDFFormat.TRIG_PRETTY);
+              fos3.close();
+           } catch (IOException e) {
+              e.printStackTrace();
+           }
+
+        }
+
+
+
+
+
 
 
         /// STEP 3 DEFINE TEMPORAL AND SPATIAL CONTAINERS
 
-        HashMap<String, ArrayList<String>> temporalContainers = TemporalReasoning.getTemporalContainers(eckgMap, seckgMap, matchSettings);
+ /*       HashMap<String, ArrayList<String>> temporalContainers = TemporalReasoning.getTemporalContainers(eckgMap, seckgMap, matchSettings);
 
 
         /// STEP 4 CROSSDOC EVENT COREF WITHIN CONTAINERS
@@ -102,6 +165,8 @@ public class Task5EventCorefVersion2 {
             String containerKey = containerKeys.next();
             System.out.print("containerKey = " + containerKey+":");
             ArrayList<String> eventIds = temporalContainers.get(containerKey);
+
+
             HashMap<String, ArrayList<Statement>> containerEvents = EventIdentity.lookForSimilarEvents(
                                 eventIds,
                                 eckgMap,
@@ -129,7 +194,7 @@ public class Task5EventCorefVersion2 {
             } catch (IOException e) {
                e.printStackTrace();
             }
-        }
+        }*/
         /// STEP 5 CREATE THE CONLL FILE
         createSystemConllFile(finalEvents, pathToConllFile);
     }
