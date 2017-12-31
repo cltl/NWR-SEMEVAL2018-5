@@ -1,17 +1,90 @@
 package util;
 
+import com.hp.hpl.jena.rdf.model.Statement;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
 
 /**
  * Created by piek on 09/11/2017.
  */
 public class Util {
 
+
+    //<http://..../02e278ddb2d52a796d111d5a1258b0ee#char=20,25&word=w3&term=t3&sentence=1&paragraph=1>
+        // gaf:denotedBy
+        //     <http://www.newsreader-project.eu/data/semeval2018-5/4f78f01eadd1fc9e9d4795f1888e18fb#
+        // char=297,308&word=w2003004,w2003005,w2003006&
+        // term=t59,t60,t61&sentence=3&paragraph=2> ;
+
+        static public ArrayList<String> getTokenIdsFromMention (String mention) {
+            ArrayList<String> ids = new ArrayList<>();
+            String [] fields = mention.split("&");
+            if (fields.length>1) {
+                String wordIdString = fields[1].substring(5);
+                String[] subfields = wordIdString.split(",");
+                for (int i = 0; i < subfields.length; i++) {
+                    String subfield = subfields[i];
+                    ids.add(subfield);
+                }
+            }
+            return ids;
+        }
+
+        static public ArrayList<String> getFilesFromStatements (ArrayList<Statement> directStatements) {
+             ArrayList<String> fileNames = new ArrayList<>();
+             for (int j = 0; j < directStatements.size(); j++) {
+                 Statement statement = directStatements.get(j);
+                 if (statement.getPredicate().getLocalName().equals("denotedBy")) {
+                     String mention = statement.getObject().toString();
+                     String fileName = getFileNameFromMention(mention);
+                     if (!fileNames.contains(fileName)) fileNames.add(fileName);
+
+                 }
+             }
+             return fileNames;
+        }
+
+        static public String getFileNameFromMention (String mention) {
+            String fileName = "";
+            int idx_s = mention.lastIndexOf("/");
+            int idx_e = mention.lastIndexOf("#");
+            fileName = mention.substring(idx_s+1, idx_e);
+            return fileName;
+        }
+
+        public static  HashMap<String, String>  getTokenEventMap(HashMap<String, ArrayList<Statement>> kGraph, ArrayList<String> allEventKeys) {
+            HashMap<String, String> tokenEventMap = new HashMap<>();
+            Set keySet = kGraph.keySet();
+            Iterator<String> keys = keySet.iterator();
+            while (keys.hasNext()) {
+                String eventKey = keys.next();
+               // System.out.println("eventKey = " + eventKey);
+                if (!allEventKeys.contains(eventKey)) allEventKeys.add(eventKey);
+                ArrayList<Statement> directStatements = kGraph.get(eventKey);
+                for (int j = 0; j < directStatements.size(); j++) {
+                    Statement statement = directStatements.get(j);
+                    if (statement.getPredicate().getLocalName().equals("denotedBy")) {
+                        String mention = statement.getObject().toString();
+                        //System.out.println("mention = " + mention);
+                        String fileName = getFileNameFromMention(mention);
+                        ArrayList<String> tokenList = getTokenIdsFromMention(mention);
+                        for (int t = 0; t < tokenList.size(); t++) {
+                            String tokenId = fileName+":"+tokenList.get(t);
+                           // System.out.println("tokenId = " + tokenId);
+                            tokenEventMap.put(tokenId, eventKey);
+                        }
+                    }
+                }
+            }
+            System.out.println("tokenEventMap.size() = " + tokenEventMap.size());
+            return tokenEventMap;
+        }
 
     static public Integer getEventId (String eventId, ArrayList<String> allEventKeys) {
         Integer intId = new Integer(allEventKeys.indexOf(eventId));

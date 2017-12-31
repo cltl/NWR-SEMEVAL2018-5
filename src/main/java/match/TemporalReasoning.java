@@ -4,9 +4,10 @@ import com.hp.hpl.jena.query.Dataset;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
-import com.hp.hpl.jena.tdb.TDBFactory;
 import objects.Time;
 import org.apache.jena.riot.RDFDataMgr;
+import question.Questiondata;
+import vu.cltl.triple.TrigTripleData;
 import vu.cltl.triple.TrigUtil;
 
 import java.io.File;
@@ -19,6 +20,7 @@ public class TemporalReasoning {
         for (int i = 0; i < trigFiles.size(); i++) {
             File trigFile = trigFiles.get(i);
             String documentCreationTime = getDocumentCreationTime(trigFile);
+            //System.out.println("documentCreationTime = " + documentCreationTime);
             if (containers.containsKey(documentCreationTime)) {
                 ArrayList<File> files= containers.get(documentCreationTime);
                 files.add(trigFile);
@@ -33,19 +35,33 @@ public class TemporalReasoning {
         return containers;
     }
 
+
+    /**
+     *
+     * @param trigFile
+     * @return
+     */
+    /*
+        <http://www.newsreader-project.eu/data/semeval2018-5/0a3e49ad0467c6545e36d754cc08d312#tmx0>
+            a                time:Instant ;
+            time:inDateTime  <http://www.newsreader-project.eu/time/20170112> .
+     */
     static public String getDocumentCreationTime(File trigFile) {
         String dct = "NODCT";
-        Dataset dataset = TDBFactory.createDataset();
-        dataset = RDFDataMgr.loadDataset(trigFile.getAbsolutePath());
-        Model namedModel = dataset.getDefaultModel();
+        Dataset dataset = RDFDataMgr.loadDataset(trigFile.getAbsolutePath());
+        Model namedModel = dataset.getNamedModel(TrigTripleData.instanceGraph);
         StmtIterator siter = namedModel.listStatements();
         while (siter.hasNext()) {
             Statement s = siter.nextStatement();
             String subject = s.getSubject().getURI();
             if (subject.endsWith("#tmx0")) {
                if (s.getPredicate().getLocalName().equals("inDateTime")) {
-                   dct = s.getObject().asResource().getLocalName();
-                   break;
+                   if (s.getObject().isURIResource()) {
+                       dct = s.getObject().asResource().getURI();
+                       dct = dct.substring(dct.lastIndexOf("/")+1);
+                       //System.out.println("dct = " + dct);
+                       break;
+                   }
                }
             }
         }
@@ -237,5 +253,28 @@ public class TemporalReasoning {
         }
     }
 
+
+    static boolean matchTimeConstraint (ArrayList<Statement> statements, Questiondata questiondata) {
+            //nwr:tmx1	inDateTime	20170131
+            //nwr:tmx1	inDateTime	201701
+            //nwr:tmx1	inDateTime	2017
+            //"day": "14/01/2017"
+            //"month": "01/2017"
+            //"year": "2017"
+        for (int i = 0; i < statements.size(); i++) {
+            Statement statement = statements.get(i);
+            if (statement.getPredicate().getLocalName().equals("inDateTime")) {
+                //System.out.println("TrigUtil.getPrettyNSValue(statement.getObject().toString() = " + TrigUtil.getPrettyNSValue(statement.getObject().toString()));
+                if (TrigUtil.getPrettyNSValue(statement.getObject().toString()).equals(questiondata.getYear())) {
+                    return true;
+                } else if (TrigUtil.getPrettyNSValue(statement.getObject().toString()).equals(questiondata.getNormalisedDay())) {
+                    return true;
+                } else if (TrigUtil.getPrettyNSValue(statement.getObject().toString()).equals(questiondata.getNormalisedDay())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
 }

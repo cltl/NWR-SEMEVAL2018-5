@@ -21,4 +21,20 @@ public class ParticipantTypes {
         }
         return false;
     }
+
+    static public String getHumanLabel (String label) {
+        for (int i = 0; i < humanWords.length; i++) {
+            String humanWord = humanWords[i];
+            if (label.equalsIgnoreCase(humanWord)) {
+                return humanWord;
+            }
+            else if (label.toLowerCase().startsWith(humanWord+" ")) {
+                return humanWord;
+            }
+            else if (label.toLowerCase().endsWith(" "+humanWord)) {
+                return humanWord;
+            }
+        }
+        return "";
+    }
 }

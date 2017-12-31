@@ -4,14 +4,14 @@ import com.hp.hpl.jena.query.Dataset;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.tdb.TDBFactory;
 import conll.ConllOutputFromSem;
-import match.EventIdentity;
+import match.DocumentIdentity;
 import match.MatchSettings;
 import match.TemporalReasoning;
 import objects.EventTypes;
+import objects.Space;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFFormat;
 import org.json.simple.JSONObject;
-import question.Questiondata;
 import util.Util;
 import vu.cltl.triple.TrigUtil;
 
@@ -37,11 +37,20 @@ public class Task5EventCorefVersion2 {
 
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
+    static String testParameters = "--trig-files /Users/piek/Desktop/SemEval2018/trial_data_final/NAFDONE " +
+            "--conll-file /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/docs.conll " +
+            "--event-file /Users/piek/Desktop/SemEval2018/scripts/trial_vocabulary " +
+            "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel " +
+            "--states /Users/piek/Desktop/SemEval2018/scripts/states.rel";
+
     static public void main(String[] args) {
-        String pathToTrigFiles = "/Users/piek/Desktop/SemEval2018/trial_data_final/NAFDONE";
-        String pathToConllFile = "/Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/docs.conll";
-        String eventFile = "/Users/piek/Desktop/SemEval2018/trial_vocabulary";
+        String pathToTrigFiles = "";
+        String pathToConllFile = "";
+        String eventFile = "";
+        String cityLex = "";
+        String stateLex = "";
         MatchSettings matchSettings = new MatchSettings();
+        if (args.length==0) args = testParameters.split(" ");
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             if (arg.equals("--trig-files") && args.length>(i+1)) {
@@ -53,7 +62,16 @@ public class Task5EventCorefVersion2 {
             else if (arg.equals("--event-file") && args.length>(i+1)) {
                 eventFile = args[i+1];
             }
+            else if (arg.equals("--cities") && args.length>(i+1)) {
+                cityLex = args[i+1];
+                Space.initCities(new File (cityLex));
+            }
+            else if (arg.equals("--states") && args.length>(i+1)) {
+                stateLex = args[i+1];
+                Space.initStates(new File (stateLex));
+            }
         }
+        System.out.println("Space.locationURIs.toString() = " + Space.locationURIs.size());
         matchSettings.parseArguments(args);
         matchSettings.setLoose();
        // matchSettings.setMatchAny(true);
@@ -66,15 +84,10 @@ public class Task5EventCorefVersion2 {
         HashMap<String, String> eventVocabulary = Util.ReadFileToStringHashMap(eventFile);
         EventTypes.initVocabulary(eventVocabulary);
         
-        File conllFileFolder = new File (pathToConllFile).getParentFile();
-        File eckgFolder = new File (conllFileFolder.getAbsolutePath()+"/"+"eckg");
+        File taskFileFolder = new File (pathToTrigFiles).getParentFile();
+        File eckgFolder = new File (taskFileFolder.getAbsolutePath()+"/"+"eckg");
         if (!eckgFolder.exists()) eckgFolder.mkdir();
-        File trigFolder = new File (pathToTrigFiles);
 
-        /// STEP 1
-        /// process all trig files and build the knowledge graphs
-        ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".coref.trig");
-        System.out.println("trigFiles.size() = " + trigFiles.size());
 
         /// our first approach is event driven. Since we can expect one incident per source document, we probably can better
         /// use the document as a starting point:
@@ -85,224 +98,107 @@ public class Task5EventCorefVersion2 {
 
         /// We could create temporal containers from the questions or from the document creation time.
 
+        /// STEP 1
+        /// process all trig files and build temporal containers using the document creation time
+        File trigFolder = new File (pathToTrigFiles);
+        ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".coref.trig");
+        System.out.println("trigFiles.size() = " + trigFiles.size());
         HashMap<String,ArrayList<File>> temporalContainers = TemporalReasoning.getTemporalContainersWithTrigFiles(trigFiles);
-
-        Set containerSet = temporalContainers.keySet();
-        Iterator<String> containerKeys = containerSet.iterator();
-        HashMap<String, ArrayList<Statement>> finalEvents = new HashMap<>();
-        while (containerKeys.hasNext()) {
-            String containerKey = containerKeys.next();
-            System.out.print("containerKey = " + containerKey+":");
-            ArrayList<File> timeTrigFiles = temporalContainers.get(containerKey);
-            /// now we need to deal with all the events in these trigfiles
-            /// get locations
-            /// get participants
-            /// compare trigfiles for location and participant match
-            /// if so merge events mentions accordingly but make sure hit, kill and injury are participant sensitive
-
-
-            /// we get all triples from these trigfiles that share the same temporal container
-            vu.cltl.triple.TrigTripleData trigTripleData = vu.cltl.triple.TrigTripleReader.readTripleFromTrigFiles(timeTrigFiles);
-
-            /// from the complete graph we extract all events that match the domain constraints
-            ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances, eventVocabulary);
-            HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
-            HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
-            System.out.println("eckgMap = " + eckgMap.size());
-            System.out.println("seckgMap = " + seckgMap.size());
-            System.out.println("domainEvents = " + domainEvents.size());
-
-            /// we need to build some similarity function that compares the events across the trigfiles with the same DCT
-            HashMap<String, ArrayList<Statement>> containerEvents = EventIdentity.lookForSimilarEvents(
-                                domainEvents,
-                                eckgMap,
-                                seckgMap,
-                                matchSettings);
-            if (domainEvents.size()==containerEvents.size()) {
-                //System.out.println("NO MERGE");
-                System.out.println();
-            }
-            else {
-                System.out.println("MERGED = " + (domainEvents.size()-containerEvents.size()));
-            }
-
-            finalEvents.putAll(containerEvents);
-            //// Dump the ECKGs
-           try {
-              OutputStream fos3 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".trig");
-              Dataset dataset = TDBFactory.createDataset();
-              TrigUtil.prefixDefaultModels(dataset);
-              ArrayList<String> containerEventKeys = new ArrayList<>(containerEvents.keySet());
-              HashMap<String, ArrayList<Statement>> seckgContainerEvent = TrigUtil.getSecondaryKnowledgeGraphHashMap( containerEventKeys,trigTripleData);
-              TrigUtil.addStatementsToJenaData(dataset, containerEvents);
-              TrigUtil.addStatementsToJenaData(dataset, seckgContainerEvent);
-              RDFDataMgr.write(fos3, dataset.getDefaultModel(), RDFFormat.TRIG_PRETTY);
-              fos3.close();
-           } catch (IOException e) {
-              e.printStackTrace();
-           }
-
-        }
-
-
-
-
-
-
-
-        /// STEP 3 DEFINE TEMPORAL AND SPATIAL CONTAINERS
-
- /*       HashMap<String, ArrayList<String>> temporalContainers = TemporalReasoning.getTemporalContainers(eckgMap, seckgMap, matchSettings);
-
-
-        /// STEP 4 CROSSDOC EVENT COREF WITHIN CONTAINERS
-        /// This will carry out cross-document event coreference for all events that belong to the same domain
         System.out.println("temporalContainers.size() = " + temporalContainers.size());
         Set containerSet = temporalContainers.keySet();
         Iterator<String> containerKeys = containerSet.iterator();
         HashMap<String, ArrayList<Statement>> finalEvents = new HashMap<>();
+
         while (containerKeys.hasNext()) {
             String containerKey = containerKeys.next();
-            System.out.print("containerKey = " + containerKey+":");
-            ArrayList<String> eventIds = temporalContainers.get(containerKey);
 
+           // HashMap<String, ArrayList<Statement>> eckgMap = new HashMap<>();
+            HashMap<String, ArrayList<Statement>> seckgMap = new HashMap<>();
+            ArrayList<File> timeTrigFiles = temporalContainers.get(containerKey);
+            System.out.println("containerKey = " + containerKey+":"+timeTrigFiles.size());
 
-            HashMap<String, ArrayList<Statement>> containerEvents = EventIdentity.lookForSimilarEvents(
-                                eventIds,
-                                eckgMap,
-                                seckgMap,
-                                matchSettings);
-            if (eventIds.size()==containerEvents.size()) {
-                //System.out.println("NO MERGE");
-                System.out.println();
-            }
-            else {
-                System.out.println("MERGED = " + (eventIds.size()-containerEvents.size()));
-            }
-            finalEvents.putAll(containerEvents);
+            HashMap<String, ArrayList<Statement>> containerIncidents = getContainerEvents(timeTrigFiles, seckgMap, eventVocabulary, matchSettings);
+
+            finalEvents.putAll(containerIncidents);
             //// Dump the ECKGs
             try {
-               OutputStream fos3 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".trig");
-               Dataset dataset = TDBFactory.createDataset();
-               TrigUtil.prefixDefaultModels(dataset);
-               ArrayList<String> containerEventKeys = new ArrayList<>(containerEvents.keySet());
-               HashMap<String, ArrayList<Statement>> seckgContainerEvent = TrigUtil.getSecondaryKnowledgeGraphHashMap( containerEventKeys,trigTripleData);
-               TrigUtil.addStatementsToJenaData(dataset, containerEvents);
-               TrigUtil.addStatementsToJenaData(dataset, seckgContainerEvent);
-               RDFDataMgr.write(fos3, dataset.getDefaultModel(), RDFFormat.TRIG_PRETTY);
-               fos3.close();
+              OutputStream fos3 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".trig");
+              Dataset dataset = TDBFactory.createDataset();
+              TrigUtil.prefixDefaultModels(dataset);
+              TrigUtil.addStatementsToJenaData(dataset, containerIncidents);
+              TrigUtil.addStatementsToJenaData(dataset, seckgMap);
+              RDFDataMgr.write(fos3, dataset.getDefaultModel(), RDFFormat.TRIG_PRETTY);
+              fos3.close();
             } catch (IOException e) {
-               e.printStackTrace();
+              e.printStackTrace();
             }
-        }*/
+        }
+
         /// STEP 5 CREATE THE CONLL FILE
         createSystemConllFile(finalEvents, pathToConllFile);
     }
 
 
+    static HashMap<String, ArrayList<Statement>> getContainerEvents (ArrayList<File> containerTrigFiles,
+                                                                     HashMap<String, ArrayList<Statement>> seckgMap,
+                                                                     HashMap<String, String> eventVocabulary,
+                                                                     MatchSettings matchSettings) {
+        /// now we need to deal with all the events in these trigfiles
+          /// get locations
+          /// get participants
+          /// compare trigfiles for location and participant match
+          /// if so merge events mentions accordingly but make sure hit, kill and injury are participant sensitive
+
+          /// we get all triples from these trigfiles that share the same temporal container
+
+          HashMap<String, ArrayList<Statement>> containerIncidents = new HashMap<>();
+          HashMap<String, ArrayList<Statement>> eckgMap = new HashMap<>();
+          HashMap<String, ArrayList<String>> documentEventIndex = new HashMap<>();
+
+          for (int i = 0; i < containerTrigFiles.size(); i++) {
+              File timeTrigFile = containerTrigFiles.get(i);
+              vu.cltl.triple.TrigTripleData trigTripleData = vu.cltl.triple.TrigTripleReader.readTripleFromTrigFile(timeTrigFile);
+
+              /// from the complete graph we extract all events that match the domain constraints
+              ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances, eventVocabulary);
+              documentEventIndex.put(timeTrigFile.getName(), domainEvents);
+
+              TrigUtil.addPrimaryKnowledgeGraphHashMap(domainEvents, eckgMap, trigTripleData);
+              TrigUtil.addSecondaryKnowledgeGraphHashMap(domainEvents, seckgMap, trigTripleData);
+              //System.out.println("domainEvents = " + domainEvents.size());
+          }
+
+          System.out.println("eckgMap = " + eckgMap.size());
+          System.out.println("seckgMap = " + seckgMap.size());
+
+          /// we need to build some similarity function that compares the events across the trigfiles with the same DCT
+
+          HashMap<String, ArrayList<String>> indicentEventIndex =
+                  DocumentIdentity.getIncidentEventMapFromDocuments(documentEventIndex, eckgMap, seckgMap, matchSettings );
+
+          containerIncidents =
+                  DocumentIdentity.getIndicentEventsWithStatements(
+                              documentEventIndex,
+                              indicentEventIndex,
+                              eckgMap,
+                              seckgMap);
+          
+          return containerIncidents;
+    }
+
      static void createSystemConllFile (
                         HashMap<String, ArrayList<Statement>> eckgMap,
                         String pathToConllFile
                         ) {
-           HashMap<String, String> tokenEventIdMap =  getTokenEventMap(eckgMap);
+           HashMap<String, String> tokenEventIdMap =  Util.getTokenEventMap(eckgMap, allEventKeys);
            File conllFile = new File (pathToConllFile);
            File conllResultFolder = conllFile.getParentFile();
            if (!conllResultFolder.exists()) conllResultFolder.mkdir();
            ConllOutputFromSem.resultForCoNLLFile(conllFile, allEventKeys, tokenEventIdMap);
      }
 
-    //<http://..../02e278ddb2d52a796d111d5a1258b0ee#char=20,25&word=w3&term=t3&sentence=1&paragraph=1>
-    // gaf:denotedBy
-    //     <http://www.newsreader-project.eu/data/semeval2018-5/4f78f01eadd1fc9e9d4795f1888e18fb#
-    // char=297,308&word=w2003004,w2003005,w2003006&
-    // term=t59,t60,t61&sentence=3&paragraph=2> ;
 
-    static ArrayList<String> getTokenIdsFromMention (String mention) {
-        ArrayList<String> ids = new ArrayList<>();
-        String [] fields = mention.split("&");
-        if (fields.length>1) {
-            String wordIdString = fields[1].substring(5);
-            String[] subfields = wordIdString.split(",");
-            for (int i = 0; i < subfields.length; i++) {
-                String subfield = subfields[i];
-                ids.add(subfield);
-            }
-        }
-        return ids;
-    }
 
-     static ArrayList<String> getFilesFromStatements (ArrayList<Statement> directStatements) {
-         ArrayList<String> fileNames = new ArrayList<>();
-         for (int j = 0; j < directStatements.size(); j++) {
-             Statement statement = directStatements.get(j);
-             if (statement.getPredicate().getLocalName().equals("denotedBy")) {
-                 String mention = statement.getObject().toString();
-                 String fileName = getFileNameFromMention(mention);
-                 if (!fileNames.contains(fileName)) fileNames.add(fileName);
-
-             }
-         }
-         return fileNames;
-    }
-
-    static String getFileNameFromMention (String mention) {
-        String fileName = "";
-        int idx_s = mention.lastIndexOf("/");
-        int idx_e = mention.lastIndexOf("#");
-        fileName = mention.substring(idx_s+1, idx_e);
-        return fileName;
-    }
-
-    static  HashMap<String, String>  getTokenEventMap ( HashMap<String, ArrayList<Statement>> kGraph) {
-        HashMap<String, String> tokenEventMap = new HashMap<>();
-        Set keySet = kGraph.keySet();
-        Iterator<String> keys = keySet.iterator();
-        while (keys.hasNext()) {
-            String eventKey = keys.next();
-           // System.out.println("eventKey = " + eventKey);
-            if (!allEventKeys.contains(eventKey)) allEventKeys.add(eventKey);
-            ArrayList<Statement> directStatements = kGraph.get(eventKey);
-            for (int j = 0; j < directStatements.size(); j++) {
-                Statement statement = directStatements.get(j);
-                if (statement.getPredicate().getLocalName().equals("denotedBy")) {
-                    String mention = statement.getObject().toString();
-                    //System.out.println("mention = " + mention);
-                    String fileName = getFileNameFromMention(mention);
-                    ArrayList<String> tokenList = getTokenIdsFromMention(mention);
-                    for (int t = 0; t < tokenList.size(); t++) {
-                        String tokenId = fileName+":"+tokenList.get(t);
-                       // System.out.println("tokenId = " + tokenId);
-                        tokenEventMap.put(tokenId, eventKey);
-                    }
-                }
-            }
-        }
-        System.out.println("tokenEventMap.size() = " + tokenEventMap.size());
-        return tokenEventMap;
-    }
-
-    static boolean matchTimeConstraint (ArrayList<Statement> statements, Questiondata questiondata) {
-            //nwr:tmx1	inDateTime	20170131
-            //nwr:tmx1	inDateTime	201701
-            //nwr:tmx1	inDateTime	2017
-            //"day": "14/01/2017"
-            //"month": "01/2017"
-            //"year": "2017"
-        for (int i = 0; i < statements.size(); i++) {
-            Statement statement = statements.get(i);
-            if (statement.getPredicate().getLocalName().equals("inDateTime")) {
-                //System.out.println("TrigUtil.getPrettyNSValue(statement.getObject().toString() = " + TrigUtil.getPrettyNSValue(statement.getObject().toString()));
-                if (TrigUtil.getPrettyNSValue(statement.getObject().toString()).equals(questiondata.getYear())) {
-                    return true;
-                } else if (TrigUtil.getPrettyNSValue(statement.getObject().toString()).equals(questiondata.getNormalisedDay())) {
-                    return true;
-                } else if (TrigUtil.getPrettyNSValue(statement.getObject().toString()).equals(questiondata.getNormalisedDay())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 
     /**
      *

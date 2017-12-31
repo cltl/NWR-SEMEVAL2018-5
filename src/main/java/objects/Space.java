@@ -9,6 +9,10 @@ import java.util.HashMap;
 public class Space {
     static public HashMap<String, ArrayList<String>> cityMap = new HashMap();
     static public HashMap<String, ArrayList<String>> stateMap = new HashMap();
+    static public ArrayList<String> locationURIs = new ArrayList<>();
+
+
+
 
     //http://dbpedia.org/page/Flint,_Michigan
     //dbo:isPartOf
@@ -93,22 +97,29 @@ dbr:Flint_Township,_Michigan
                         String[] fields = inputLine.trim().split("\t");
                         if (fields.length==2) {
                             String uri = fields[0];
-                            String []targets = fields[1].split(",");
+                            if (uri.startsWith("<")) {
+                                uri = uri.substring(1);
+                            }
+                            if (uri.endsWith(">")) {
+                                uri = uri.substring(0, uri.length()-1);
+                            }
+                            String []targets = fields[1].split(", ");
                             ArrayList<String> targetList = new ArrayList<>();
                             for (int i = 0; i < targets.length; i++) {
-                                String target = targets[i];
+                                String target = targets[i].trim();
                                 if (target.startsWith("[")) {
                                     target = target.substring(1);
                                 }
                                 if (target.endsWith("]")) {
                                     target = target.substring(0, target.length()-1);
-                                    System.out.println("target = " + target);
+                                   // System.out.println("target = " + target);
                                 }
                                 if (target.startsWith("http://")) {
-                                    target = "<"+target+">";
                                     targetList.add(target);
                                 }
                             }
+                            locationURIs.add(uri);
+                            locationURIs.addAll(targetList);
                             map.put(uri, targetList);
                         }
                     }
@@ -120,33 +131,6 @@ dbr:Flint_Township,_Michigan
         }
     }
 
-    static public  ArrayList<String> spaceRelatedCityLexicon (String sourceUri, ArrayList<String> targetUris) {
-        ArrayList<String> matches = new ArrayList<>();
-        if (cityMap.containsKey(sourceUri))  {
-            ArrayList<String> objects = cityMap.get(sourceUri);
-            for (int i = 0; i < objects.size(); i++) {
-                String object = objects.get(i);
-                if (targetUris.contains(object)) {
-                    if (!matches.contains(object)) matches.add(object);
-                }
-            }
-        }
-        return matches;
-    }
-
-    static public  ArrayList<String> spaceRelatedStateLexicon (String sourceUri, ArrayList<String> targetUris) {
-        ArrayList<String> matches = new ArrayList<>();
-        if (stateMap.containsKey(sourceUri))  {
-            ArrayList<String> objects = stateMap.get(sourceUri);
-            for (int i = 0; i < objects.size(); i++) {
-                String object = objects.get(i);
-                if (targetUris.contains(object)) {
-                    if (!matches.contains(object)) matches.add(object);
-                }
-            }
-        }
-        return matches;
-    }
 
     static public  ArrayList<String> spaceRelatedSparql (String sourceUri, ArrayList<String> targetUris) {
         ArrayList<String> matches = new ArrayList<>();

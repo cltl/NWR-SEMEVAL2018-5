@@ -14,11 +14,11 @@ import java.util.Set;
  */
 public class EventTypes {
 
-    static final String DEAD = "DEAD";
-    static final String INJURED = "INJURED";
-    static final String SHOOT = "SHOOT";
-    static final String HIT = "HIT";
-    static final String INCIDENT = "INCIDENT";
+    static public final String DEAD = "DEAD";
+    static public final String INJURED = "INJURED";
+    static public final String SHOOT = "SHOOT";
+    static public final String HIT = "HIT";
+    static public final String INCIDENT = "INCIDENT";
 
     static final String[] incidentTypes = {"eso:Attacking", "eso:Destroying", "fn:Attack", "fn:Catastrophe", "fn:Cause_harm","fn:Destroying"};
 
@@ -190,6 +190,12 @@ public class EventTypes {
         return eventUris;
     }
 
+
+    public static String getEventType(String subjectUri, HashMap<String, ArrayList<Statement>> eckgMap) {
+            ArrayList<Statement> statements  = eckgMap.get(subjectUri);
+            String type = getType(statements);
+            return type;
+    }
 
     public static String getEventType(String subjectUri, ArrayList<Statement> statements) {
             String type = getType(statements);

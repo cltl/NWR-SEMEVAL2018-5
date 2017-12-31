@@ -1,6 +1,7 @@
 package task5;
 
 import com.hp.hpl.jena.rdf.model.Statement;
+import match.SpatialReasoning;
 import match.TrigReader;
 import objects.Participants;
 import objects.Space;
@@ -30,8 +31,8 @@ public class Task5Counting {
 
     static public boolean LOGGING = false;
     static OutputStream locationlog = null;
-    static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/questions.json " +
-            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/eckg --subtask s3" +
+    static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s1/questions.json " +
+            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/eckg --subtask s1" +
             " --cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel --states /Users/piek/Desktop/SemEval2018/scripts/states.rel";
     static String subtask = "s1"; // s2, s3
     static public void main(String[] args) {
@@ -293,7 +294,7 @@ public class Task5Counting {
             String key = events.get(i);
             ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get(key);
             if (checkType(questiondata, statements) && checkLocation(questiondata, statements, trigTripleData)) {
-                participants = Participants.getEntityParticipants(trigTripleData, statements);
+                participants = Participants.getEntityParticipants(trigTripleData.tripleMapOthers, statements);
             }
         }
         //System.out.println("participants = " + participants.toString());
@@ -306,7 +307,7 @@ public class Task5Counting {
             String key = events.get(i);
             ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get(key);
             if (checkType(questiondata, statements) && checkLocation(questiondata, statements, trigTripleData)) {
-                participants = Participants.getNonEntityParticipants(trigTripleData, statements);
+                participants = Participants.getNonEntityParticipants(trigTripleData.tripleMapOthers, statements);
             }
         }
         //System.out.println("participants = " + participants.toString());
@@ -395,10 +396,10 @@ public class Task5Counting {
         if (dbpediaTargetObjects.size()>0) {
             ArrayList<String> matchingLocations = new ArrayList<>();
            if (!questiondata.getCity().isEmpty()) {
-               matchingLocations = Space.spaceRelatedCityLexicon("<"+questiondata.getCity()+">", dbpediaTargetObjects);
+               matchingLocations = SpatialReasoning.spaceRelatedCityLexicon("<"+questiondata.getCity()+">", dbpediaTargetObjects);
            }
            if (!questiondata.getState().isEmpty()) {
-               matchingLocations.addAll(Space.spaceRelatedStateLexicon("<"+questiondata.getState()+">", dbpediaTargetObjects));
+               matchingLocations.addAll(SpatialReasoning.spaceRelatedStateLexicon("<"+questiondata.getState()+">", dbpediaTargetObjects));
            }
            if (matchingLocations.size()>0) {
                System.out.println("INDIRECT LOCATION MATCH:"+matchingLocations.toString());
