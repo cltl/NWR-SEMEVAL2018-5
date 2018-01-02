@@ -89,7 +89,7 @@ public class Participants {
                 if (!participantUri.isEmpty()) {
                     /// check for HUMAN
                     if (isHumanEntity(participantUri, seckgMap)) {
-                        System.out.println("participantUri = " + participantUri.toString());
+                       // System.out.println("participantUri = " + participantUri.toString());
                         if (!participants.contains(participantUri)) {
                             participants.add(participantUri);
                         }

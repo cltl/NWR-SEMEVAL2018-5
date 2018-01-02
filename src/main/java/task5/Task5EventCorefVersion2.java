@@ -175,7 +175,7 @@ public class Task5EventCorefVersion2 {
           /// we need to build some similarity function that compares the events across the trigfiles with the same DCT
 
           HashMap<String, ArrayList<String>> indicentEventIndex =
-                  DocumentIdentity.getIncidentEventMapFromDocuments2(documentEventIndex, eckgMap, seckgMap, matchSettings );
+                  DocumentIdentity.getIncidentEventMapFromDocuments1(documentEventIndex, eckgMap, seckgMap, matchSettings );
 
           containerIncidents =
                   DocumentIdentity.getIndicentEventsWithStatements(
