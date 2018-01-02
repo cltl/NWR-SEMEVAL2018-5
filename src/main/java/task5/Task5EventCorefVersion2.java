@@ -37,7 +37,7 @@ public class Task5EventCorefVersion2 {
 
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
-    static String testParameters = "--trig-files /Users/piek/Desktop/SemEval2018/trial_data_final/NAFDONE " +
+    static String testParameters = "--trig-files /Users/piek/Desktop/SemEval2018/trial_data_final/NAFDONE.ALL " +
             "--conll-file /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/docs.conll " +
             "--event-file /Users/piek/Desktop/SemEval2018/scripts/trial_vocabulary " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel " +
@@ -71,7 +71,6 @@ public class Task5EventCorefVersion2 {
                 Space.initStates(new File (stateLex));
             }
         }
-        System.out.println("Space.locationURIs.toString() = " + Space.locationURIs.size());
         matchSettings.parseArguments(args);
         matchSettings.setLoose();
        // matchSettings.setMatchAny(true);
@@ -83,7 +82,9 @@ public class Task5EventCorefVersion2 {
         /// We first read the event type vocabulary file.
         HashMap<String, String> eventVocabulary = Util.ReadFileToStringHashMap(eventFile);
         EventTypes.initVocabulary(eventVocabulary);
-        
+        System.out.println("eventVocabulary.size() = " + eventVocabulary.size());
+        System.out.println("Space.locationURIs.toString() = " + Space.locationURIs.size());
+
         File taskFileFolder = new File (pathToTrigFiles).getParentFile();
         File eckgFolder = new File (taskFileFolder.getAbsolutePath()+"/"+"eckg");
         if (!eckgFolder.exists()) eckgFolder.mkdir();
@@ -115,7 +116,7 @@ public class Task5EventCorefVersion2 {
            // HashMap<String, ArrayList<Statement>> eckgMap = new HashMap<>();
             HashMap<String, ArrayList<Statement>> seckgMap = new HashMap<>();
             ArrayList<File> timeTrigFiles = temporalContainers.get(containerKey);
-            System.out.println("containerKey = " + containerKey+":"+timeTrigFiles.size());
+            System.out.println("containerKey = " + containerKey+": "+timeTrigFiles.size()+" source files");
 
             HashMap<String, ArrayList<Statement>> containerIncidents = getContainerEvents(timeTrigFiles, seckgMap, eventVocabulary, matchSettings);
 
@@ -174,7 +175,7 @@ public class Task5EventCorefVersion2 {
           /// we need to build some similarity function that compares the events across the trigfiles with the same DCT
 
           HashMap<String, ArrayList<String>> indicentEventIndex =
-                  DocumentIdentity.getIncidentEventMapFromDocuments(documentEventIndex, eckgMap, seckgMap, matchSettings );
+                  DocumentIdentity.getIncidentEventMapFromDocuments2(documentEventIndex, eckgMap, seckgMap, matchSettings );
 
           containerIncidents =
                   DocumentIdentity.getIndicentEventsWithStatements(

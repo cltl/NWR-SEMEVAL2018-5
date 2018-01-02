@@ -90,9 +90,9 @@ public class MatchUtil {
     }
 
     static public boolean entityParticipant (Statement statement) {
-        if ((statement.getPredicate().getLocalName().equals("A0"))
+        if ((statement.getPredicate().getLocalName().equalsIgnoreCase("a0"))
                         ||
-                (statement.getPredicate().getLocalName().equals("A1"))
+                (statement.getPredicate().getLocalName().equalsIgnoreCase("a1"))
          ) {
 
             if ((statement.getObject().toString().indexOf("/entities/")>-1)) {
@@ -103,9 +103,9 @@ public class MatchUtil {
     }
 
     static public boolean nonentityParticipant (Statement statement) {
-        if ((statement.getPredicate().getLocalName().equals("A0"))
+        if ((statement.getPredicate().getLocalName().equalsIgnoreCase("a0"))
                         ||
-                (statement.getPredicate().getLocalName().equals("A1"))
+                (statement.getPredicate().getLocalName().equalsIgnoreCase("a1"))
          ) {
 
             if ((statement.getObject().toString().indexOf("non-entities")>-1)) {
@@ -120,9 +120,9 @@ public class MatchUtil {
 
     static public boolean dbpParticipant (Statement statement) {
         if (
-                (statement.getPredicate().getLocalName().equals("A0"))
+                (statement.getPredicate().getLocalName().equalsIgnoreCase("a0"))
                         ||
-                (statement.getPredicate().getLocalName().equals("A1"))
+                (statement.getPredicate().getLocalName().equalsIgnoreCase("a1"))
          ) {
             //System.out.println("statement.getObject().toString() = " + statement.getObject().toString());
             if ((statement.getObject().toString().indexOf("dbpedia")>-1)) {
@@ -133,9 +133,9 @@ public class MatchUtil {
     }
 
     static public boolean dbpPlace (Statement statement) {
-        if (statement.getPredicate().getLocalName().equals("hasPlace") ||
-                    statement.getPredicate().getLocalName().equals("atPlace-location") ||
-                    statement.getPredicate().getLocalName().equals("AM-LOC")
+        if (statement.getPredicate().getLocalName().equalsIgnoreCase("hasPlace") ||
+                    statement.getPredicate().getLocalName().equalsIgnoreCase("atPlace-location") ||
+                    statement.getPredicate().getLocalName().equalsIgnoreCase("AM-LOC")
                  )
         {
             if ((statement.getObject().toString().indexOf("dbpedia")>-1)) {
@@ -145,9 +145,9 @@ public class MatchUtil {
         return false;
     }
     static public boolean anyPlace (Statement statement) {
-        if (statement.getPredicate().getLocalName().equals("hasPlace") ||
-            statement.getPredicate().getLocalName().equals("atPlace-location") ||
-            statement.getPredicate().getLocalName().equals("AM-LOC")
+        if (statement.getPredicate().getLocalName().equalsIgnoreCase("hasPlace") ||
+            statement.getPredicate().getLocalName().equalsIgnoreCase("atPlace-location") ||
+            statement.getPredicate().getLocalName().equalsIgnoreCase("AM-LOC")
          )
         { return true;  }
         else

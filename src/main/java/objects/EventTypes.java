@@ -42,6 +42,7 @@ public class EventTypes {
     static ArrayList<String> hitWords = new ArrayList<>();
     static ArrayList<String> injureWords = new ArrayList<>();
 
+
     /**
      * We need to initialise the vocabulary of words with their event type
      * @param wordMap
@@ -197,7 +198,7 @@ public class EventTypes {
             return type;
     }
 
-    public static String getEventType(String subjectUri, ArrayList<Statement> statements) {
+    public static String getEventType(ArrayList<Statement> statements) {
             String type = getType(statements);
             return type;
     }
@@ -213,6 +214,15 @@ public class EventTypes {
                 if (isInjury(objValue)) return INJURED;
                 if (isIncident(objValue)) return INCIDENT;
                 if (isHit(objValue)) return HIT;
+            }
+            else if (statement.getPredicate().getLocalName().equals("prefLabel")) {
+                String objValue = statement.getObject().toString();
+                //System.out.println("objValue = " + objValue);
+                if (isShootWord(objValue)) return SHOOT;
+                if (isKillWord(objValue)) return DEAD;
+                if (isInjuryWord(objValue)) return INJURED;
+                if (isIncidentWord(objValue)) return INCIDENT;
+                if (isHitWord(objValue)) return HIT;
             }
         }
         return "";
@@ -279,7 +289,11 @@ public class EventTypes {
             Statement statement = statements.get(i);
             if (statement.getPredicate().getLocalName().equals("type")) {
                 String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
-                if (EventTypes.isKill(objValue))  {
+               // System.out.println("objValue = " + objValue);
+                if (objValue.equals(EventTypes.DEAD))  {
+                    return true;
+                }
+                else if (EventTypes.isKill(objValue))  {
                     return true;
                 }
             }
@@ -292,6 +306,9 @@ public class EventTypes {
             Statement statement = statements.get(i);
             if (statement.getPredicate().getLocalName().equals("type")) {
                 String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
+                if (objValue.equals(EventTypes.INJURED))  {
+                    return true;
+                }
                 if (EventTypes.isInjury(objValue))  {
                     return true;
                 }

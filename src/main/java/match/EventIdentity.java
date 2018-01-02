@@ -31,12 +31,12 @@ public class EventIdentity {
             //boolean merge = false;
             if (!skipEvents.contains(key1)) {
                 ArrayList<Statement> directStatements1 = eckgMap.get(key1);
-                String key1Type = getEventType(key1, directStatements1 );
+                String key1Type = getEventType(directStatements1 );
                 for (int j = i+1; j < domainEvents.size(); j++) {
                     String key2 = domainEvents.get(j);
                     if (!skipEvents.contains(key2)) {
                         ArrayList<Statement> directStatements2 = eckgMap.get(key2);
-                        String key2Type = getEventType(key2, directStatements2 );
+                        String key2Type = getEventType(directStatements2 );
                         if (!key1Type.isEmpty() && key1Type.equals(key2Type)) {
                             ArrayList<Statement> matchingStatements = matchingStatements(directStatements1, directStatements2, matchSettings);
                             ArrayList<Statement> matchingPrefStatements = matchingStatementsByPrefLabel(seckgMap, directStatements1, directStatements2, matchSettings);

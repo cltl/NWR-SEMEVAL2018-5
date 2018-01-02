@@ -44,16 +44,47 @@ public class SpatialReasoning {
             return locationObjects;
         }
 
+        static public ArrayList<Statement> getLocationStatements (HashMap<String, ArrayList<Statement>> seckgMap, ArrayList<Statement> statements) {
+            ArrayList<Statement> locationObjects = new ArrayList<>();
+            for (int i = 0; i < statements.size(); i++) {
+                Statement statement = statements.get(i);
+                if (Space.locationURIs.contains(statement.getObject().toString())) {
+                    if (!locationObjects.contains(statement.getObject().toString())) {
+                        locationObjects.add(statement);
+                    }
+                }
+                else if (seckgMap.containsKey(statement.getObject().toString())) {
+                    ArrayList<Statement> statementArrayList = seckgMap.get(statement.getObject().toString());
+                    for (int j = 0; j < statementArrayList.size(); j++) {
+                        Statement objectStatement = statementArrayList.get(j);
+                        if (objectStatement.getPredicate().getLocalName().equals("type")) {
+                            if (Space.locationURIs.contains(objectStatement.getObject().toString())) {
+                                if (!locationObjects.contains(objectStatement.getObject().toString())) {
+                                    locationObjects.add(objectStatement);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return locationObjects;
+        }
 
-    static public  ArrayList<String> spaceRelatedCityLexicon (String sourceUri, ArrayList<String> targetUris) {
+
+    static public  ArrayList<String> spaceRelatedCityLexicon (String uri, ArrayList<String> targetUris) {
         ArrayList<String> matches = new ArrayList<>();
-        //System.out.println("targetUris = " + targetUris);
+       // System.out.println("targetUris = " + targetUris);
+        String sourceUri = uri;
+        if (!Space.stateMap.containsKey(sourceUri))  {
+            sourceUri = "<"+uri+">";
+        }
         if (Space.cityMap.containsKey(sourceUri))  {
+            System.out.println("sourceUri = " + sourceUri);
             ArrayList<String> objects = Space.cityMap.get(sourceUri);
             for (int i = 0; i < objects.size(); i++) {
                 String object = objects.get(i);
                 if (targetUris.contains(object)) {
-                   // System.out.println("object = " + object);
+                    System.out.println("object = " + object);
                     if (!matches.contains(object)) matches.add(object);
                 }
             }
@@ -61,9 +92,14 @@ public class SpatialReasoning {
         return matches;
     }
 
-    static public  ArrayList<String> spaceRelatedStateLexicon (String sourceUri, ArrayList<String> targetUris) {
+    static public  ArrayList<String> spaceRelatedStateLexicon (String uri, ArrayList<String> targetUris) {
         ArrayList<String> matches = new ArrayList<>();
+        String sourceUri = uri;
+        if (!Space.stateMap.containsKey(sourceUri))  {
+            sourceUri = "<"+uri+">";
+        }
         if (Space.stateMap.containsKey(sourceUri))  {
+           // System.out.println("sourceUri = " + sourceUri);
             ArrayList<String> objects = Space.stateMap.get(sourceUri);
             for (int i = 0; i < objects.size(); i++) {
                 String object = objects.get(i);

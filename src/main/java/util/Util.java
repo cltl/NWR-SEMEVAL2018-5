@@ -5,16 +5,56 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by piek on 09/11/2017.
  */
 public class Util {
 
+
+
+        static public String getPrefLabel (String uri, HashMap<String, ArrayList<Statement>> map) {
+            String prefLabel = "";
+            ArrayList<Statement> statements = map.get(uri);
+            for (int i = 0; i < statements.size(); i++) {
+                Statement statement = statements.get(i);
+                if (statement.getPredicate().getLocalName().equals("preLabel")) {
+                   prefLabel = statement.getObject().asLiteral().toString().replace(" ", "_");
+                }
+            }
+            if (prefLabel.isEmpty()) {
+                int idx = uri.lastIndexOf("/");
+                if (idx>-1) {
+                    prefLabel = uri.substring(idx+1);
+                }
+                else prefLabel = uri;
+            }
+            return prefLabel;
+        }
+
+        static public ArrayList<String> getSortedObjectPrefLabels (ArrayList<Statement> statements, HashMap<String, ArrayList<Statement>> map) {
+            ArrayList<String> prefLabels = new ArrayList<>();
+            for (int i = 0; i < statements.size(); i++) {
+                Statement statement = statements.get(i);
+                String prefLabel = getPrefLabel(statement.getObject().toString(), map);
+                if (!prefLabels.contains(prefLabel)) {
+                    prefLabels.add(prefLabel);
+                }
+            }
+            Collections.sort(prefLabels);
+            return prefLabels;
+        }
+        static public String getObjectPrefLabelString (ArrayList<Statement> statements, HashMap<String, ArrayList<Statement>> map) {
+            String prefs = "";
+            ArrayList<String> prefLabels = getSortedObjectPrefLabels(statements, map);
+            for (int i = 0; i < prefLabels.size(); i++) {
+                String label = prefLabels.get(i);
+                if (i>0) prefs+="+";
+                prefs += label;
+            }
+            return prefs;
+        }
 
     //<http://..../02e278ddb2d52a796d111d5a1258b0ee#char=20,25&word=w3&term=t3&sentence=1&paragraph=1>
         // gaf:denotedBy
@@ -63,12 +103,13 @@ public class Util {
             Set keySet = kGraph.keySet();
             Iterator<String> keys = keySet.iterator();
             while (keys.hasNext()) {
-                String eventKey = keys.next();
+                String incidentKey = keys.next();
                // System.out.println("eventKey = " + eventKey);
-                if (!allEventKeys.contains(eventKey)) allEventKeys.add(eventKey);
-                ArrayList<Statement> directStatements = kGraph.get(eventKey);
+                ArrayList<Statement> directStatements = kGraph.get(incidentKey);
                 for (int j = 0; j < directStatements.size(); j++) {
                     Statement statement = directStatements.get(j);
+                    String eventId = statement.getSubject().getURI();
+                    if (!allEventKeys.contains(eventId)) allEventKeys.add(eventId);
                     if (statement.getPredicate().getLocalName().equals("denotedBy")) {
                         String mention = statement.getObject().toString();
                         //System.out.println("mention = " + mention);
@@ -77,7 +118,7 @@ public class Util {
                         for (int t = 0; t < tokenList.size(); t++) {
                             String tokenId = fileName+":"+tokenList.get(t);
                            // System.out.println("tokenId = " + tokenId);
-                            tokenEventMap.put(tokenId, eventKey);
+                            tokenEventMap.put(tokenId, eventId);
                         }
                     }
                 }
