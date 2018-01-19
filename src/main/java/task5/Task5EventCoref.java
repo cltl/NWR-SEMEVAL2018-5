@@ -76,11 +76,11 @@ public class Task5EventCoref {
         ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".coref.trig");
         System.out.println("trigFiles.size() = " + trigFiles.size());
 
-        vu.cltl.triple.TrigTripleData trigTripleData = vu.cltl.triple.TrigTripleReader.readTripleFromTrigFiles(trigFiles);
+        vu.cltl.triple.objects.TrigTripleData trigTripleData = vu.cltl.triple.read.TrigTripleReader.readTripleFromTrigFiles(trigFiles);
 
         /// STEP 2
         /// from the complete graph we extract all events that match the domain constraints
-        ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances, eventVocabulary);
+        ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances);
         HashMap<String, ArrayList<Statement>> eckgMap = TrigUtil.getPrimaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         HashMap<String, ArrayList<Statement>> seckgMap = TrigUtil.getSecondaryKnowledgeGraphHashMap(domainEvents,trigTripleData);
         System.out.println("eckgMap = " + eckgMap.size());

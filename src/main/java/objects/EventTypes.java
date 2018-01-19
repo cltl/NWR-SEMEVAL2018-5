@@ -14,13 +14,31 @@ import java.util.Set;
  */
 public class EventTypes {
 
+
+    /*
+     142 s1/questions.json:        "event_type": "fire_burning",
+ 551 s1/questions.json:        "event_type": "injuring",
+  13 s1/questions.json:        "event_type": "job_firing",
+ 326 s1/questions.json:        "event_type": "killing",
+  79 s2/questions.json:        "event_type": "fire_burning",
+ 543 s2/questions.json:        "event_type": "injuring",
+   4 s2/questions.json:        "event_type": "job_firing",
+ 371 s2/questions.json:        "event_type": "killing",
+1502 s3/questions.json:        "event_type": "injuring",
+  26 s3/questions.json:        "event_type": "job_firing",
+ 928 s3/questions.json:        "event_type": "killing",
+     */
+
     static public final String DEAD = "DEAD";
     static public final String INJURED = "INJURED";
     static public final String SHOOT = "SHOOT";
     static public final String HIT = "HIT";
     static public final String INCIDENT = "INCIDENT";
+    static public final String BURN = "BURN";
+    static public final String DISMISS = "DISMISS";
 
-    static final String[] incidentTypes = {"eso:Attacking", "eso:Destroying", "fn:Attack", "fn:Catastrophe", "fn:Cause_harm","fn:Destroying"};
+    static final String[] incidentTypes = {"eso:Attacking", "eso:Destroying", "fn:Attack",
+            "fn:Catastrophe", "fn:Cause_harm","fn:Destroying", "fn:Catastrophe"};
 
     static final String[] killTypes = {"eso:BeingInExistence",  "eso:Destroying",
                 "eso:Killing", "fn:Cause_to_end",
@@ -35,12 +53,16 @@ public class EventTypes {
     static final String[] hitTypes = { "fn:Cause_impact","fn:Hit_target"};
 
     static final String[] shootTypes = { "fn:Shoot_projectiles", "fn:Use_firearm","fn:Firing"};
+    static final String[] burnTypes = { "fn:Absorb_heat", "fn:Apply_heat","fn:Setting_fire"};
+    static final String[] dismissTypes = {"fn:Quitting_a_place","fn:Get_a_job","fn:Hiring","fn:Employing","fn:Being_employed", "fn:Earnings_and_losses", "fn:Change_of_leadership","fn:Quitting", "fn:Personal_relationship", "fn:Working_a_post"};
 
     static ArrayList<String> killWords = new ArrayList<>();
     static ArrayList<String> incidentWords = new ArrayList<>();
     static ArrayList<String> shootWords = new ArrayList<>();
     static ArrayList<String> hitWords = new ArrayList<>();
     static ArrayList<String> injureWords = new ArrayList<>();
+    static ArrayList<String> burnWords = new ArrayList<>();
+    static ArrayList<String> dismissWords = new ArrayList<>();
 
 
     /**
@@ -68,6 +90,12 @@ public class EventTypes {
           else if (type.equalsIgnoreCase(HIT)) {
              hitWords.add(word);
           }
+          else if (type.equalsIgnoreCase(BURN)) {
+             burnWords.add(word);
+          }
+          else if (type.equalsIgnoreCase(DISMISS)) {
+             dismissWords.add(word);
+          }
       }
   }
 
@@ -79,6 +107,8 @@ public class EventTypes {
         if (isInjury(type)) return true;
         if (isIncident(type)) return true;
         if (isShoot(type)) return true;
+        if (isBurn(type)) return true;
+        if (isDismiss(type)) return true;
         return false;
     }
 
@@ -89,6 +119,8 @@ public class EventTypes {
         if (isKillWord(word))  return true;
         if (isShootWord(word))  return true;
         if (isHitWord(word))  return true;
+        if (isBurnWord(word))  return true;
+        if (isDismissWord(word))  return true;
         return false;
     }
 
@@ -127,6 +159,22 @@ public class EventTypes {
     public static boolean isHit(String type) {
         for (int i = 0; i < hitTypes.length; i++) {
             String s = hitTypes[i];
+            if (s.equals(type)) return true;
+        }
+        return false;
+    }
+
+    public static boolean isBurn(String type) {
+        for (int i = 0; i < burnTypes.length; i++) {
+            String s = burnTypes[i];
+            if (s.equals(type)) return true;
+        }
+        return false;
+    }
+
+    public static boolean isDismiss(String type) {
+        for (int i = 0; i < dismissTypes.length; i++) {
+            String s = dismissTypes[i];
             if (s.equals(type)) return true;
         }
         return false;
@@ -171,7 +219,23 @@ public class EventTypes {
         return false;
     }
 
-    public static ArrayList<String> getDomainEventSubjectUris(HashMap<String, ArrayList<Statement>> tripleMap, HashMap<String, String> eventVocabulary) {
+    public static boolean isBurnWord(String word) {
+        for (int i = 0; i < burnWords.size(); i++) {
+            String s = burnWords.get(i);
+            if (s.equalsIgnoreCase(word)) return true;
+        }
+        return false;
+    }
+
+    public static boolean isDismissWord(String word) {
+        for (int i = 0; i < dismissWords.size(); i++) {
+            String s = dismissWords.get(i);
+            if (s.equalsIgnoreCase(word)) return true;
+        }
+        return false;
+    }
+
+    public static ArrayList<String> getDomainEventSubjectUris(HashMap<String, ArrayList<Statement>> tripleMap) {
         Set keySet = tripleMap.keySet();
         ArrayList<String> eventUris = new ArrayList<>();
         Iterator<String> keys = keySet.iterator();
@@ -214,6 +278,8 @@ public class EventTypes {
                 if (isInjury(objValue)) return INJURED;
                 if (isIncident(objValue)) return INCIDENT;
                 if (isHit(objValue)) return HIT;
+                if (isBurn(objValue)) return BURN;
+                if (isDismiss(objValue)) return DISMISS;
             }
             else if (statement.getPredicate().getLocalName().equals("prefLabel")) {
                 String objValue = statement.getObject().toString();
@@ -223,6 +289,8 @@ public class EventTypes {
                 if (isInjuryWord(objValue)) return INJURED;
                 if (isIncidentWord(objValue)) return INCIDENT;
                 if (isHitWord(objValue)) return HIT;
+                if (isBurnWord(objValue)) return BURN;
+                if (isDismissWord(objValue)) return DISMISS;
             }
         }
         return "";

@@ -158,10 +158,10 @@ public class Task5EventCorefVersion2 {
 
           for (int i = 0; i < containerTrigFiles.size(); i++) {
               File timeTrigFile = containerTrigFiles.get(i);
-              vu.cltl.triple.TrigTripleData trigTripleData = vu.cltl.triple.TrigTripleReader.readTripleFromTrigFile(timeTrigFile);
+              vu.cltl.triple.objects.TrigTripleData trigTripleData = vu.cltl.triple.read.TrigTripleReader.readTripleFromTrigFile(timeTrigFile);
 
               /// from the complete graph we extract all events that match the domain constraints
-              ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances, eventVocabulary);
+              ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances);
               documentEventIndex.put(timeTrigFile.getName(), domainEvents);
 
               TrigUtil.addPrimaryKnowledgeGraphHashMap(domainEvents, eckgMap, trigTripleData);
