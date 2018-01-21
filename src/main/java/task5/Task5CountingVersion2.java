@@ -9,7 +9,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.json.simple.JSONObject;
 import question.Questiondata;
 import util.Util;
-import vu.cltl.triple.TrigTripleData;
+import vu.cltl.triple.objects.TrigTripleData;
 import vu.cltl.triple.TrigUtil;
 
 import java.io.*;

@@ -37,8 +37,14 @@ public class Task5EventCorefVersion2 {
 
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
-    static String testParameters = "--trig-files /Users/piek/Desktop/SemEval2018/trial_data_final/NAFDONE.ALL " +
+    static String trialParameters = "--trig-files /Users/piek/Desktop/SemEval2018/trial_data_final/NAFDONE.ALL " +
             "--conll-file /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/docs.conll " +
+            "--event-file /Users/piek/Desktop/SemEval2018/scripts/trial_vocabulary " +
+            "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel " +
+            "--states /Users/piek/Desktop/SemEval2018/scripts/states.rel";
+
+    static String testParameters = "--trig-files /Users/piek/Desktop/SemEval2018/test_data/NAFOUT " +
+            "--conll-file /Users/piek/Desktop/SemEval2018/test_data/input/s3/docs.conll " +
             "--event-file /Users/piek/Desktop/SemEval2018/scripts/trial_vocabulary " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel " +
             "--states /Users/piek/Desktop/SemEval2018/scripts/states.rel";
@@ -89,8 +95,7 @@ public class Task5EventCorefVersion2 {
         File eckgFolder = new File (taskFileFolder.getAbsolutePath()+"/"+"eckg");
         if (!eckgFolder.exists()) eckgFolder.mkdir();
 
-
-        /// our first approach is event driven. Since we can expect one incident per source document, we probably can better
+        /// our first approach is event driven. Since we expect one incident per source document, we probably can better
         /// use the document as a starting point:
         // 1. group documents per temporal container
         // 2. compare documents for incident identity
@@ -102,7 +107,7 @@ public class Task5EventCorefVersion2 {
         /// STEP 1
         /// process all trig files and build temporal containers using the document creation time
         File trigFolder = new File (pathToTrigFiles);
-        ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".coref.trig");
+        ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".trig");
         System.out.println("trigFiles.size() = " + trigFiles.size());
         HashMap<String,ArrayList<File>> temporalContainers = TemporalReasoning.getTemporalContainersWithTrigFiles(trigFiles);
         System.out.println("temporalContainers.size() = " + temporalContainers.size());

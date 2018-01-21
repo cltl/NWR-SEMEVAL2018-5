@@ -9,7 +9,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.json.simple.JSONObject;
 import question.Questiondata;
 import util.Util;
-import vu.cltl.triple.TrigTripleData;
+import vu.cltl.triple.objects.TrigTripleData;
 import vu.cltl.triple.TrigUtil;
 
 import java.io.*;
@@ -132,7 +132,7 @@ public class Task5Counting {
                        }
                    }
                    System.out.println("myTrigFiles.size() = " + myTrigFiles.size());
-                   vu.cltl.triple.TrigTripleData trigTripleData = TrigReader.simpleRdfReader(myTrigFiles);
+                   vu.cltl.triple.objects.TrigTripleData trigTripleData = TrigReader.simpleRdfReader(myTrigFiles);
                    ArrayList<String> eventKeys = getQuestionDataEventKeys(trigTripleData, questiondata);
                    System.out.println("Nr. of incidents = " + eventKeys.size());
 

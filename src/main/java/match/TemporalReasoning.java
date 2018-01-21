@@ -7,7 +7,7 @@ import com.hp.hpl.jena.rdf.model.StmtIterator;
 import objects.Time;
 import org.apache.jena.riot.RDFDataMgr;
 import question.Questiondata;
-import vu.cltl.triple.TrigTripleData;
+import vu.cltl.triple.objects.TrigTripleData;
 import vu.cltl.triple.TrigUtil;
 
 import java.io.File;

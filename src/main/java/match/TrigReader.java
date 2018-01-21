@@ -6,7 +6,7 @@ import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.tdb.TDBFactory;
 import org.apache.jena.riot.RDFDataMgr;
-import vu.cltl.triple.TrigTripleData;
+import vu.cltl.triple.objects.TrigTripleData;
 
 import java.io.File;
 import java.util.ArrayList;
