@@ -33,7 +33,7 @@ import java.util.Set;
  * It stores the ECKG to disk and annotates the CoNLL file with event mentions and coreference relations.
  * We are now dealing with one big CoNLL file instead of many separate files.
  */
-public class Task5EventCorefVersion2 {
+public class Task5EventCorefVersion3 {
 
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
@@ -41,13 +41,15 @@ public class Task5EventCorefVersion2 {
             "--conll-file /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/docs.conll " +
             "--event-file /Users/piek/Desktop/SemEval2018/scripts/trial_vocabulary " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel " +
-            "--states /Users/piek/Desktop/SemEval2018/scripts/states.rel";
+            "--states /Users/piek/Desktop/SemEval2018/scripts/states.rel" +
+            "--threshold 2";
 
     static String testParameters = "--trig-files /Users/piek/Desktop/SemEval2018/test_data/NAFOUT " +
             "--conll-file /Users/piek/Desktop/SemEval2018/test_data/input/s3/docs.conll " +
             "--event-file /Users/piek/Desktop/SemEval2018/scripts/trial_vocabulary " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel " +
-            "--states /Users/piek/Desktop/SemEval2018/scripts/states.rel";
+            "--states /Users/piek/Desktop/SemEval2018/scripts/states.rel" +
+            "--threshold 2";
 
     static public void main(String[] args) {
         String pathToTrigFiles = "";
@@ -55,6 +57,7 @@ public class Task5EventCorefVersion2 {
         String eventFile = "";
         String cityLex = "";
         String stateLex = "";
+        Integer matchThreshold = 0;
         MatchSettings matchSettings = new MatchSettings();
         if (args.length==0) args = trialParameters.split(" ");
         for (int i = 0; i < args.length; i++) {
@@ -76,10 +79,17 @@ public class Task5EventCorefVersion2 {
                 stateLex = args[i+1];
                 Space.initStates(new File (stateLex));
             }
+            else if (arg.equals("--threshold") && args.length>(i+1)) {
+                try {
+                    matchThreshold = Integer.parseInt(args[i+1]);
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                }
+            }
         }
         matchSettings.parseArguments(args);
         matchSettings.setLoose();
-       // matchSettings.setMatchAny(true);
+        if (matchThreshold>0) matchSettings.setTripleMatchThreshold(matchThreshold);
         System.out.println(matchSettings.getSettings());
         System.out.println("pathToConllFile = " + pathToConllFile);
         System.out.println("pathToTrigFiles = " + pathToTrigFiles);
@@ -109,7 +119,17 @@ public class Task5EventCorefVersion2 {
         File trigFolder = new File (pathToTrigFiles);
         ArrayList<File> trigFiles = Util.makeRecursiveFileList(trigFolder, ".trig");
         System.out.println("trigFiles.size() = " + trigFiles.size());
-        HashMap<String,ArrayList<File>> temporalContainers = TemporalReasoning.getDocumentCreationTimeContainersWithTrigFiles(trigFiles);
+        HashMap<String,ArrayList<File>> temporalContainers = new HashMap<>();
+/*
+        if (matchSettings.isWeek()) {
+            TemporalReasoning.getLooseTemporalContainersWithTrigFiles(trigFiles);
+        }
+        else {
+            TemporalReasoning.getTemporalContainersWithTrigFiles(trigFiles);
+        }
+*/
+        temporalContainers = TemporalReasoning.getTemporalContainersWithTrigFiles(trigFiles);
+
         System.out.println("temporalContainers.size() = " + temporalContainers.size());
         Set containerSet = temporalContainers.keySet();
         Iterator<String> containerKeys = containerSet.iterator();
@@ -117,26 +137,35 @@ public class Task5EventCorefVersion2 {
 
         while (containerKeys.hasNext()) {
             String containerKey = containerKeys.next();
-
-           // HashMap<String, ArrayList<Statement>> eckgMap = new HashMap<>();
-            HashMap<String, ArrayList<Statement>> seckgMap = new HashMap<>();
             ArrayList<File> timeTrigFiles = temporalContainers.get(containerKey);
             System.out.println("containerKey = " + containerKey+": "+timeTrigFiles.size()+" source files");
 
-            HashMap<String, ArrayList<Statement>> containerIncidents = getContainerEvents(timeTrigFiles, seckgMap, eventVocabulary, matchSettings);
+            HashMap<String, ArrayList<File>> eventTypeFileIndex = getContainerEventsPerType(timeTrigFiles);
+            Set typeSet = eventTypeFileIndex.keySet();
+            Iterator<String> typeSetKeys = typeSet.iterator();
+            while (typeSetKeys.hasNext()) {
+                String taskEventSubType = typeSetKeys.next();
+                ArrayList<File> typedFiles = eventTypeFileIndex.get(taskEventSubType);
+                HashMap<String, ArrayList<Statement>> seckgMap = new HashMap<>();
+                HashMap<String, ArrayList<Statement>> containerIncidents = getContainerEvents(typedFiles, seckgMap, matchSettings);
 
-            finalEvents.putAll(containerIncidents);
-            //// Dump the ECKGs
-            try {
-              OutputStream fos3 = new FileOutputStream(eckgFolder.getAbsoluteFile()+"/"+containerKey+".trig");
-              Dataset dataset = TDBFactory.createDataset();
-              TrigUtil.prefixDefaultModels(dataset);
-              TrigUtil.addStatementsToJenaData(dataset, containerIncidents);
-              TrigUtil.addStatementsToJenaData(dataset, seckgMap);
-              RDFDataMgr.write(fos3, dataset.getDefaultModel(), RDFFormat.TRIG_PRETTY);
-              fos3.close();
-            } catch (IOException e) {
-              e.printStackTrace();
+                finalEvents.putAll(containerIncidents);
+                //// Dump the ECKGs
+                try {
+                    File typeFolder = new File(eckgFolder.getAbsolutePath()+"/"+taskEventSubType);
+                    if (!typeFolder.exists()) typeFolder.mkdir();
+                    if (typeFolder.exists()) {
+                        OutputStream fos3 = new FileOutputStream(typeFolder.getAbsoluteFile() + "/" + containerKey + ".trig");
+                        Dataset dataset = TDBFactory.createDataset();
+                        TrigUtil.prefixDefaultModels(dataset);
+                        TrigUtil.addStatementsToJenaData(dataset, containerIncidents);
+                        TrigUtil.addStatementsToJenaData(dataset, seckgMap);
+                        RDFDataMgr.write(fos3, dataset.getDefaultModel(), RDFFormat.TRIG_PRETTY);
+                        fos3.close();
+                    }
+                } catch (IOException e) {
+                  e.printStackTrace();
+                }
             }
         }
 
@@ -145,9 +174,87 @@ public class Task5EventCorefVersion2 {
     }
 
 
+
+    static HashMap<String, ArrayList<Statement>> getContainerEventsPerType (ArrayList<File> containerTrigFiles,
+                                                                     HashMap<String, ArrayList<Statement>> seckgMap,
+                                                                     MatchSettings matchSettings) {
+          /// now we need to deal with all the events in these trigfiles
+          /// get locations
+          /// get participants
+          /// compare trigfiles for location and participant match
+          /// if so merge events mentions accordingly but make sure hit, kill and injury are participant sensitive
+          /// we also have to deal with BURN and DISMISS
+
+          /// we get all triples from these trigfiles that share the same temporal container
+
+          HashMap<String, ArrayList<Statement>> containerIncidents = new HashMap<>();
+          HashMap<String, ArrayList<Statement>> eckgMap = new HashMap<>();
+          HashMap<String, ArrayList<String>> documentEventIndex = new HashMap<>();
+          HashMap<String, ArrayList<String>> documentEventIndexShoot = new HashMap<>();
+          HashMap<String, ArrayList<String>> documentEventIndexBurn = new HashMap<>();
+          HashMap<String, ArrayList<String>> documentEventIndexDismiss = new HashMap<>();
+
+          for (int i = 0; i < containerTrigFiles.size(); i++) {
+              File timeTrigFile = containerTrigFiles.get(i);
+              vu.cltl.triple.objects.TrigTripleData trigTripleData = vu.cltl.triple.read.TrigTripleReader.readTripleFromTrigFile(timeTrigFile);
+
+              /// from the complete graph we extract all events that match the domain constraints
+              ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances);
+              String taskSubType = EventTypes.getDominantEventTypeFromDataset(trigTripleData.tripleMapInstances);
+              if (taskSubType.equals(EventTypes.SHOOT)) documentEventIndexShoot.put(timeTrigFile.getName(), domainEvents);
+              else if (taskSubType.equals(EventTypes.BURN)) documentEventIndexBurn.put(timeTrigFile.getName(), domainEvents);
+              else if (taskSubType.equals(EventTypes.DISMISS)) documentEventIndexDismiss.put(timeTrigFile.getName(), domainEvents);
+              else documentEventIndex.put(timeTrigFile.getName(), domainEvents);
+
+              TrigUtil.addPrimaryKnowledgeGraphHashMap(domainEvents, eckgMap, trigTripleData);
+              TrigUtil.addSecondaryKnowledgeGraphHashMap(domainEvents, seckgMap, trigTripleData);
+              //System.out.println("domainEvents = " + domainEvents.size());
+          }
+
+          System.out.println("eckgMap = " + eckgMap.size());
+          System.out.println("seckgMap = " + seckgMap.size());
+
+          /// we need some similarity function that compares the events across trigfiles with the same or similar DCT
+
+          HashMap<String, ArrayList<String>> indicentEventIndex =
+                  DocumentIdentity.getIncidentEventMapFromDocuments1(documentEventIndex, eckgMap, seckgMap, matchSettings );
+
+          containerIncidents =
+                  DocumentIdentity.getIndicentEventsWithStatements(
+                              documentEventIndex,
+                              indicentEventIndex,
+                              eckgMap,
+                              seckgMap);
+          
+          return containerIncidents;
+    }
+
+    static HashMap<String, ArrayList<File>> getContainerEventsPerType (ArrayList<File> containerTrigFiles) {
+
+          HashMap<String, ArrayList<File>> eventTypeDocumentIndex = new HashMap<>();
+          for (int i = 0; i < containerTrigFiles.size(); i++) {
+              File timeTrigFile = containerTrigFiles.get(i);
+              vu.cltl.triple.objects.TrigTripleData trigTripleData = vu.cltl.triple.read.TrigTripleReader.readTripleFromTrigFile(timeTrigFile);
+
+              /// from the complete graph we extract all events that match the domain constraints
+              ArrayList<String> domainEvents = EventTypes.getDomainEventSubjectUris(trigTripleData.tripleMapInstances);
+              String taskSubType = EventTypes.getDominantEventTypeFromDataset(trigTripleData.tripleMapInstances);
+              if (eventTypeDocumentIndex.containsKey(taskSubType)) {
+                  ArrayList<File> files = eventTypeDocumentIndex.get(taskSubType);
+                  files.add(timeTrigFile);
+                  eventTypeDocumentIndex.put(taskSubType,files);
+              }
+              else {
+                  ArrayList<File> files = new ArrayList<>();
+                  files.add(timeTrigFile);
+                  eventTypeDocumentIndex.put(taskSubType,files);
+              }
+          }
+          return eventTypeDocumentIndex;
+    }
+
     static HashMap<String, ArrayList<Statement>> getContainerEvents (ArrayList<File> containerTrigFiles,
                                                                      HashMap<String, ArrayList<Statement>> seckgMap,
-                                                                     HashMap<String, String> eventVocabulary,
                                                                      MatchSettings matchSettings) {
           /// now we need to deal with all the events in these trigfiles
           /// get locations
@@ -189,7 +296,7 @@ public class Task5EventCorefVersion2 {
                               indicentEventIndex,
                               eckgMap,
                               seckgMap);
-          
+
           return containerIncidents;
     }
 

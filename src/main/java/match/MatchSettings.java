@@ -5,6 +5,7 @@ package match;
  */
 public class MatchSettings {
 
+    private boolean week;
     private boolean matchAny;
     private boolean matchEnActor;
     private boolean matchNeActor;
@@ -21,6 +22,7 @@ public class MatchSettings {
 
 
     void init () {
+        this.week = false;
         this.matchAny = false;
         this.matchEnActor = false;
         this.matchNeActor = false;
@@ -33,6 +35,7 @@ public class MatchSettings {
     }
 
     public void setLoose () {
+            this.week = true;
             this.matchEnActor = true;
             this.matchNeActor = true;
             this.matchDbpActor = true;
@@ -57,6 +60,9 @@ public class MatchSettings {
             }
             else if (arg.equals("--dbp-place")) {
                 matchDbpPlace = true;
+            }
+            else if (arg.equals("--week")) {
+                week = true;
             }
             else if (arg.equals("--place")) {
                 matchAnyPlace = true;
@@ -107,6 +113,14 @@ public class MatchSettings {
         this.day = day;
     }
 
+    public boolean isWeek() {
+        return week;
+    }
+
+    public void setWeek(boolean week) {
+        this.week = week;
+    }
+
     public Integer getEditDistanceThreshold() {
         return editDistanceThreshold;
     }
@@ -125,6 +139,7 @@ public class MatchSettings {
 
     public String getSettings() {
         String str ="Settings:\n";
+        str += ".week = "+ week +"\n";
         str += ".matchAny = "+ matchAny +"\n";
         str += ".matchEnActor = "+ matchEnActor+"\n";
         str += ".matchNeActor = "+ matchNeActor+"\n";

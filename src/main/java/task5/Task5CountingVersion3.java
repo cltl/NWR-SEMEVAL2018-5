@@ -2,15 +2,17 @@ package task5;
 
 import com.hp.hpl.jena.rdf.model.Statement;
 import match.SpatialReasoning;
+import match.TemporalReasoning;
 import match.TrigReader;
+import objects.EventTypes;
 import objects.Participants;
 import objects.Space;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.json.simple.JSONObject;
 import question.Questiondata;
 import util.Util;
-import vu.cltl.triple.objects.TrigTripleData;
 import vu.cltl.triple.TrigUtil;
+import vu.cltl.triple.objects.TrigTripleData;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -27,8 +29,27 @@ import static objects.EventTypes.eventKillMatch;
  * We therefore separated the event coreference from answering the questions. The event coreference considers all the documents and all events within the documents
  *
  */
-public class Task5CountingVersion2 {
+public class Task5CountingVersion3 {
 
+    /**
+     * S1
+      142         "event_type": "fire_burning",
+      551         "event_type": "injuring",
+       13         "event_type": "job_firing",
+      326         "event_type": "killing",
+
+       S2
+       79         "event_type": "fire_burning",
+      543         "event_type": "injuring",
+        4         "event_type": "job_firing",
+      371         "event_type": "killing",
+
+       S3
+     1502         "event_type": "injuring",
+       26         "event_type": "job_firing",
+      928         "event_type": "killing",
+
+     */
     static public boolean LOGGING = false;
     static OutputStream locationlog = null;
     static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/questions.json " +
@@ -74,20 +95,19 @@ public class Task5CountingVersion2 {
                 e.printStackTrace();
             }
         }
-        ArrayList<File> eckgFiles = Util.makeRecursiveFileList(new File(pathToEckgFiles), ".trig");
         if (!taskFolder.isEmpty()) {
             subtask = "s1";
             pathToQuestionFile = taskFolder+"/"+subtask+"/"+"questions.json";
-            performSubtask(eckgFiles, pathToQuestionFile, subtask);
+            performSubtask(pathToEckgFiles, pathToQuestionFile, subtask);
             subtask = "s2";
             pathToQuestionFile = taskFolder+"/"+subtask+"/"+"questions.json";
-            performSubtask(eckgFiles, pathToQuestionFile, subtask);
+            performSubtask(pathToEckgFiles, pathToQuestionFile, subtask);
             subtask = "s3";
             pathToQuestionFile = taskFolder+"/"+subtask+"/"+"questions.json";
-            performSubtask(eckgFiles, pathToQuestionFile, subtask);
+            performSubtask(pathToEckgFiles, pathToQuestionFile, subtask);
         }
         else {
-            performSubtask(eckgFiles, pathToQuestionFile, subtask);
+            performSubtask(pathToEckgFiles, pathToQuestionFile, subtask);
         }
         if (LOGGING) {
             try {
@@ -98,7 +118,7 @@ public class Task5CountingVersion2 {
         }
     }
 
-    static void performSubtask (ArrayList<File> eckgFiles,
+    static void performSubtask (String eckgFolderPath,
                                 String pathToQuestionFile,
                                 String subtask) {
         //// process the question json
@@ -115,23 +135,35 @@ public class Task5CountingVersion2 {
                    System.out.println("questionId = " + questionId);
                    Object question = jsonObject.get(questionId);
                    Questiondata questiondata = new Questiondata(questionId, (JSONObject) question);
-                   String dataString = questiondata.getYear()+questiondata.getNormalisedMonth()+ questiondata.getNormalisedDay();
-                   System.out.println("dataString = " + dataString);
-                   System.out.println("questiondata = " + questiondata.getEvent_type());
+                   String dateString = questiondata.getYear()+questiondata.getNormalisedMonth()+ questiondata.getNormalisedDay();
+                   String dayString = questiondata.getDay();
+                   System.out.println("dateString = " + dateString);
+                   System.out.println("incident type= " + questiondata.getEvent_type());
                    System.out.println("state = " + questiondata.getState());
                    System.out.println("city = " + questiondata.getCity());
                    System.out.println("first = " + questiondata.getParticipant_first());
                    System.out.println("last = " + questiondata.getParticipant_last());
                    ArrayList<File> myTrigFiles = new ArrayList<>();
+                   String eventType = "SHOOT";
+                   if (questiondata.getEvent_type().equals("fire_burning")) {
+                       eventType = EventTypes.BURN;
+                   }
+                   else if (questiondata.getEvent_type().equals("job_firing")) {
+                       eventType = EventTypes.DISMISS;
+                   }
+                   File eckgFolder = new File (eckgFolderPath+"/"+eventType);
+                   ArrayList<File> eckgFiles = Util.makeRecursiveFileList(eckgFolder, ".trig");
                    for (int i = 0; i < eckgFiles.size(); i++) {
                        File eckGFile = eckgFiles.get(i);
-                       if (eckGFile.getName().startsWith(dataString)) {
+                       if (dateString.isEmpty() || eckGFile.getName().startsWith(dateString)) {
                            /// by using startWith,
                            // we ensure that constraints for just the year or month
                            // still match with specific dates
+                           // If there is no time constraints, all TrigFiles are considered
                            myTrigFiles.add(eckGFile);
                        }
-                       else { ///////
+                       else if (TemporalReasoning.matchWeekConstraint(dateString, eckGFile.getName())){ ///////
+                           myTrigFiles.add(eckGFile);
                        }
                    }
                    System.out.println("myTrigFiles.size() = " + myTrigFiles.size());
@@ -492,6 +524,12 @@ public class Task5CountingVersion2 {
 
     static boolean checkType (Questiondata questiondata, ArrayList<Statement> statements) {
         if (questiondata.getEvent_type().equals("killing") && eventKillMatch(statements)) {
+            return true;
+        }
+        if (questiondata.getEvent_type().equals("injuring") && eventInjuryMatch(statements)) {
+            return true;
+        }
+        if (questiondata.getEvent_type().equals("injuring") && eventInjuryMatch(statements)) {
             return true;
         }
         if (questiondata.getEvent_type().equals("injuring") && eventInjuryMatch(statements)) {

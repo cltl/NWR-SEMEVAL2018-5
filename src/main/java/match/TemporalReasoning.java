@@ -15,7 +15,19 @@ import java.util.*;
 
 public class TemporalReasoning {
 
-    static public HashMap<String, ArrayList<File>> getTemporalContainersWithTrigFiles (ArrayList<File> trigFiles) {
+    static public boolean matchWeekConstraint (String dayString, String eckgFileName) {
+         Time time = new Time();
+         time.parseDateString(dayString);
+         ArrayList<Time> week = time.getWeek();
+         for (int i = 0; i < week.size(); i++) {
+            Time time1 = week.get(i);
+            if (eckgFileName.startsWith(time1.toYearMonthDayString())) return true;
+
+         }
+         return false;
+    }
+
+    static public HashMap<String, ArrayList<File>> getDocumentCreationTimeContainersWithTrigFiles (ArrayList<File> trigFiles) {
         HashMap<String, ArrayList<File>> containers = new HashMap<>();
         for (int i = 0; i < trigFiles.size(); i++) {
             File trigFile = trigFiles.get(i);
@@ -37,7 +49,7 @@ public class TemporalReasoning {
 
 
     /**
-     *
+     * We extract the document-creation-time from the TriG file. If there is none, we take the first within document time
      * @param trigFile
      * @return
      */
@@ -47,8 +59,17 @@ public class TemporalReasoning {
             time:inDateTime  <http://www.newsreader-project.eu/time/20170112> .
      */
     static public String getDocumentCreationTime(File trigFile) {
-        String dct = "NODCT";
+        String dct = "";
         Dataset dataset = RDFDataMgr.loadDataset(trigFile.getAbsolutePath());
+        getDocumentCreationTime(dataset);
+        dataset.close();
+        return dct;
+    }
+
+    static public Time getDocumentCreationTime(Dataset dataset) {
+        Time dcTime = new Time();
+        String dct = "";
+        String otherTime = "";
         Model namedModel = dataset.getNamedModel(TrigTripleData.instanceGraph);
         StmtIterator siter = namedModel.listStatements();
         while (siter.hasNext()) {
@@ -64,10 +85,122 @@ public class TemporalReasoning {
                    }
                }
             }
+            else if (otherTime.isEmpty()){
+                if (s.getPredicate().getLocalName().equals("inDateTime")) {
+                   if (s.getObject().isURIResource()) {
+                       otherTime = s.getObject().asResource().getURI();
+                       otherTime = otherTime.substring(dct.lastIndexOf("/")+1);
+                   }
+               }
+            }
         }
+        if (dct.isEmpty() && !otherTime.isEmpty())  {
+                dct = otherTime;
+        }
+        dcTime.parseDateString(dct);
         dataset.close();
-        return dct;
+        return dcTime;
     }
+
+    static ArrayList<Statement> getTimeStatements (Dataset dataset) {
+        ArrayList<Statement> timeStatements = new ArrayList<>();
+        Model namedModel = dataset.getNamedModel(TrigTripleData.instanceGraph);
+        StmtIterator siter = namedModel.listStatements();
+        while (siter.hasNext()) {
+            Statement statement = siter.nextStatement();
+            if (    statement.getPredicate().getLocalName().equals("inDateTime") ||
+                    statement.getPredicate().getLocalName().equals("hasBeginning") ||
+                    statement.getPredicate().getLocalName().equals("hasEnd")
+                ) {
+                timeStatements.add(statement);
+            }
+        }
+        return timeStatements;
+    }
+
+
+    static public HashMap<String, ArrayList<File>> getTemporalContainersWithTrigFiles (
+            ArrayList<File> trigFiles) {
+        HashMap<String, ArrayList<File>> containers = new HashMap<String, ArrayList<File>>();
+        for (int i = 0; i < trigFiles.size(); i++) {
+            File trigFile = trigFiles.get(i);
+           // System.out.println("trigFile = " + trigFile.getName());
+            Dataset dataset = RDFDataMgr.loadDataset(trigFile.getAbsolutePath());
+            ArrayList<Statement> timeStatements = getTimeStatements(dataset);
+            ArrayList<Time> dominantTimes = getDominantTimes(timeStatements, false);
+            if (dominantTimes.size()>0) {
+                ///// there can be multiple dates, if  So files are copied to multiple buckets
+                for (int j = 0; j < dominantTimes.size(); j++) {
+                    Time time = dominantTimes.get(j);
+                    String timeString = time.toYearMonthDayString();
+                    if (containers.containsKey(timeString)) {
+                        ArrayList<File> files = containers.get(timeString);
+                        files.add(trigFile);
+                        containers.put(timeString, files);
+                    } else {
+                        ArrayList<File> files = new ArrayList<>();
+                        files.add(trigFile);
+                        containers.put(timeString, files);
+                    }
+                }
+            }
+            else {
+                String documentCreationTime = getDocumentCreationTime(dataset).toYearMonthDayString();
+                //System.out.println("documentCreationTime = " + documentCreationTime);
+                if (containers.containsKey(documentCreationTime)) {
+                    ArrayList<File> files = containers.get(documentCreationTime);
+                    files.add(trigFile);
+                    containers.put(documentCreationTime, files);
+                } else {
+                    ArrayList<File> files = new ArrayList<>();
+                    files.add(trigFile);
+                    containers.put(documentCreationTime, files);
+                }
+            }
+        }
+        return containers;
+    }
+
+    static public HashMap<String, ArrayList<File>> getLooseTemporalContainersWithTrigFiles (
+            ArrayList<File> trigFiles) {
+        HashMap<String, ArrayList<File>> containers = new HashMap<String, ArrayList<File>>();
+        for (int i = 0; i < trigFiles.size(); i++) {
+            File trigFile = trigFiles.get(i);
+            Dataset dataset = RDFDataMgr.loadDataset(trigFile.getAbsolutePath());
+            ArrayList<Statement> timeStatements = getTimeStatements(dataset);
+            ArrayList<Time> dominantTimes = getDominantTimes(timeStatements, false);
+            if (dominantTimes.size()==0) {
+                Time documentCreationTime = getDocumentCreationTime(dataset);
+                dominantTimes.add(documentCreationTime);
+            }
+            ArrayList<Time> allWeeks = new ArrayList<>();
+            for (int j = 0; j < dominantTimes.size(); j++) {
+                Time time = dominantTimes.get(j);
+                ArrayList<Time> week = time.getWeek();
+                for (int k = 0; k < week.size(); k++) {
+                    Time time1 = week.get(k);
+                    Time.addToTimeList(allWeeks, time1);
+                }
+            }
+            ///// there can be multiple dates, if  So files are copied to multiple buckets
+            for (int j = 0; j < allWeeks.size(); j++) {
+                Time time =  allWeeks.get(j);
+                String timeString = time.toYearMonthDayString();
+                if (containers.containsKey(timeString)) {
+                    ArrayList<File> files = containers.get(timeString);
+                    files.add(trigFile);
+                    containers.put(timeString, files);
+                } else {
+                    ArrayList<File> files = new ArrayList<>();
+                    files.add(trigFile);
+                    containers.put(timeString, files);
+                }
+            }
+
+        }
+        return containers;
+    }
+
 
     static public HashMap<String, ArrayList<String>> getTemporalContainers (
             HashMap<String, ArrayList<Statement>> eckgMap,
@@ -80,19 +213,12 @@ public class TemporalReasoning {
         while (keys.hasNext()) {
            String eventKey = keys.next();
            String timeString = "";
-            /*if (eventKey.endsWith("e1e2f54c3fb0c19ac3f9c4c3857269d5#ev1")) {
-                System.out.println("eventKey = " + eventKey);
-                DEBUG = true;
-            }
-            else {
-                DEBUG = false;
-            }*/
            if (seckgMap.containsKey(eventKey)) {
                ArrayList<Statement> secondaryStatements = seckgMap.get(eventKey);
                if (DEBUG) {
                    System.out.println("secondaryStatements = " + secondaryStatements.size());
                }
-               ArrayList<Time> dominantDates = getDominantTimeStrings(secondaryStatements, DEBUG);
+               ArrayList<Time> dominantDates = getDominantTimes(secondaryStatements, DEBUG);
                if (dominantDates.size()>0) {
                    if (matchSettings.isDay()) {
                        timeString = dominantDates.get(0).toYearMonthDayString();
@@ -132,7 +258,8 @@ public class TemporalReasoning {
         return map;
     }
 
-    static ArrayList<Time> getDominantTimeStrings (ArrayList<Statement> statements, boolean DEBUG) {
+
+    static ArrayList<Time> getDominantTimes (ArrayList<Statement> statements, boolean DEBUG) {
             //nwr:tmx1	inDateTime	20170131
             //nwr:tmx1	inDateTime	201701
             //nwr:tmx1	inDateTime	2017
@@ -168,20 +295,8 @@ public class TemporalReasoning {
                     ) {
                 String timeString = TrigUtil.getPrettyNSValue(statement.getObject().toString());
                 Time time = new Time();
-               // System.out.println("timeString = " + timeString);
-                if (timeString.length() == 8) {
-                    time.setDay(Integer.parseInt(timeString.substring(6, 8)));
-                    time.setMonth(Integer.parseInt(timeString.substring(4, 6)));
-                    time.setYear(Integer.parseInt(timeString.substring(0, 4)));
-                } else if (timeString.length() == 6) {
-                    time.setMonth(Integer.parseInt(timeString.substring(4, 6)));
-                    time.setYear(Integer.parseInt(timeString.substring(0, 4)));
-                } else if (timeString.length() == 4) {
-
-                    time.setYear(Integer.parseInt(timeString.substring(0, 4)));
-                } else {
-                    /// we have a problem
-                }
+                //System.out.println("timeString = " + timeString);
+                time.parseDateString(timeString);
                 if (time.getYear() != 0) {
                     timeArrayList.add(time);
                     if (years.containsKey(time.getYear())) {
@@ -192,9 +307,13 @@ public class TemporalReasoning {
                         years.put(time.getYear(), 1);
                     }
                 }
+                else {
+                  //  System.out.println("time.toYearMonthDayString() = " + time.toYearMonthDayString());
+                }
             }
         }
         Integer domYear = getMostFrequent(years);
+        //System.out.println("domYear = " + domYear);
         for (int i = 0; i < timeArrayList.size(); i++) {
             Time time = timeArrayList.get(i);
             if (time.getYear().equals(domYear)) {
@@ -216,12 +335,10 @@ public class TemporalReasoning {
            if (time.getYear().equals(domYear) && time.getMonth().equals(domMonth)) {
                dominantTimeArrayList.add(time);
            }
-        }/*
-        sortHashMap(years);
-        sortHashMap(months);
-        sortHashMap(days);*/
-
-        return timeArrayList;
+        }
+/*        sortHashMap(years);
+        sortHashMap(months);*/
+        return dominantTimeArrayList;
     }
 
 

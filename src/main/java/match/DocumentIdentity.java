@@ -1,10 +1,8 @@
 package match;
 
-import com.hp.hpl.jena.query.Dataset;
-import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
-import com.hp.hpl.jena.tdb.TDBFactory;
 import com.hp.hpl.jena.vocabulary.RDF;
 import objects.EventTypes;
 import objects.Participants;
@@ -21,11 +19,13 @@ import static match.MatchUtil.matchingStatementsByPrefLabel;
 import static util.Util.getObjectPrefLabelString;
 
 public class DocumentIdentity {
-
-
-
     /**
      * We get all particpants and locations from all events for a file and compare these with the others
+     * This version compares locations, entity-participants and, if there are no entity-participants, non-entity-participants.
+     *
+     * If the number of both mutual locations and mutual entity-participants is above the triple threshold, we have a match
+     * If there are no entity-participants in event 1, we also accept mutual locations and mutual nonentity-participants above threshold
+     *
      * @param documentEventIndex
      * @param eckgMap
      * @param seckgMap
@@ -54,21 +54,18 @@ public class DocumentIdentity {
                 //System.out.println("nonentityparticipants1.toString() = " + nonentityparticipants1.toString());
                 ArrayList<String> locations1 = getLocations(fileEvents1, eckgMap, seckgMap);
                 //System.out.println("locations1.size() = " + locations1.toString());
-
-
-
                 for (Map.Entry<String, ArrayList<String>> entry2 : documentEventIndex.entrySet()) {
                     if (!processedFiles.contains(entry2.getKey())) {
                         ArrayList<String> fileEvents2 = documentEventIndex.get(entry2.getKey());
 
                         ArrayList<String> entityparticipants2 = getEntityParticipants(fileEvents2, eckgMap, seckgMap);
-                        //System.out.println("entityparticipants2.toString() = " + entityparticipants2.toString());
-                        ArrayList<String> locations2 = getLocations(fileEvents2, eckgMap, seckgMap);
-                        //System.out.println("locations2.size() = " + locations2.toString());
                         ArrayList<String> mutualEntityParticipants = new ArrayList<>(entityparticipants1);
                         mutualEntityParticipants.retainAll(entityparticipants2);
+                        //System.out.println("entityparticipants2.toString() = " + entityparticipants2.toString());
+                        ArrayList<String> locations2 = getLocations(fileEvents2, eckgMap, seckgMap);
                         ArrayList<String> mutualLocations = new ArrayList<>(locations1);
                         mutualLocations.retainAll(locations2);
+                        //System.out.println("locations2.size() = " + locations2.toString());
                         /// We require both a participant and location match for the whole file
                         if (    (mutualLocations.size() >= matchSettings.getTripleMatchThreshold() )
                                 &&
@@ -109,6 +106,7 @@ public class DocumentIdentity {
 
     /**
      * We get all particpants and locations from all events for a file and compare these with the others
+     * This version does not differentiate the statements
      * @param documentEventIndex
      * @param eckgMap
      * @param seckgMap
@@ -219,7 +217,9 @@ public class DocumentIdentity {
             ArrayList<Statement> killList = new ArrayList<>();
             ArrayList<Statement> hitList = new ArrayList<>();
             ArrayList<Statement> injureList = new ArrayList<>();
-            /// we first collect all statements per event type (HIT, DEAD, INJURE) with their participants
+            ArrayList<Statement> burnList = new ArrayList<>();
+            ArrayList<Statement> dismissList = new ArrayList<>();
+            /// we first collect all statements per event type (HIT, DEAD, INJURE, BURN, DISMISS) with their participants
             /// we assign these later to the ones without participants
             for (int j = 0; j < events.size(); j++) {
                 String event = events.get(j);
@@ -245,6 +245,12 @@ public class DocumentIdentity {
                    else if (eventType.equals(EventTypes.HIT)) {
                       hitList.addAll(participants);
                    }
+                   else if (eventType.equals(EventTypes.BURN)) {
+                      burnList.addAll(participants);
+                   }
+                   else if (eventType.equals(EventTypes.DISMISS)) {
+                      dismissList.addAll(participants);
+                   }
                 }
             }
 
@@ -259,7 +265,160 @@ public class DocumentIdentity {
                 }
                 //// Instance level match
                 if (eventType.equals(EventTypes.INCIDENT) ||
-                        eventType.equals((EventTypes.SHOOT))) {
+                        eventType.equals(EventTypes.SHOOT) ||
+                        eventType.equals(EventTypes.BURN) ||
+                        eventType.equals(EventTypes.DISMISS)) {
+                    eventArrayList.add(incidentKey);
+                    incidentStatements.addAll(aggregateStatements(incidentKey, eventType, eventStatements, allParticipants, allLocations ));
+                }
+                else {
+
+                    /// Subtype level match
+                    String participantKey = incidentKey + "#"+eventType+"#";
+
+                    /// We get the local participants for this event
+                    ArrayList<Statement> participants = new ArrayList<>();
+                    ArrayList<Statement> participantCandidates = Participants.getEntityParticipantStatements(seckgMap, eventStatements);
+                    for (int k = 0; k < participantCandidates.size(); k++) {
+                        Statement statement = participantCandidates.get(k);
+                        //// we check if this is not a location
+                       if (!TrigUtil.hasStatement(allLocations, statement)) {
+                          participants.add(statement);
+                       }
+                    }
+                    participants.addAll(Participants.getNonEntityParticipantStatements(seckgMap, eventStatements));
+
+                    if (participants.size()==0) {
+
+                        //// this is the generic instance for this type without participant information UNK
+                        //participantKey += "UNK";
+                        if (eventType.equals(EventTypes.DEAD)) {
+                           participants = killList;
+                        }
+                        else if (eventType.equals(EventTypes.INJURED)) {
+                           participants = injureList;
+                        }
+                        else if (eventType.equals(EventTypes.HIT)) {
+                           participants = hitList;
+                        }
+                    }
+
+                    /// if we have local participants, we use these to identify the event mention
+
+                    participantKey += getObjectPrefLabelString(participants, seckgMap);
+                    eventArrayList.add(participantKey);
+                  //  System.out.println("participantKey = " + participantKey);
+                    incidentStatements.addAll(aggregateStatements(participantKey, eventType, eventStatements, participants, allLocations ));
+
+                }
+            }
+            mergedIncidentEventMap.put(incidentKey, incidentStatements);
+        }
+        Collections.sort(eventArrayList);
+        System.out.println("eventArrayList = " + eventArrayList.size());
+       // System.out.println(eventArrayList.toString());
+        return mergedIncidentEventMap;
+    }    /**
+
+
+     * We now have a map from Incident to Events that belong to that incident
+     * We check the event type
+     * If it is INCIDENT or SHOOT, all events get the same instance ID
+     * If it is one of the other types, we differentiate by the participants
+     *
+     * @param documentEventIndex
+     * @param indicentEventIndex
+     * @param eckgMap
+     * @param seckgMap
+     * @return
+     */
+    static public HashMap<String, ArrayList<Statement>> getIndicentEventsWithStatements (String taskSubType, HashMap<String, ArrayList<String>> documentEventIndex,
+                                                                                  HashMap<String, ArrayList<String>> indicentEventIndex,
+                                                                                  HashMap<String, ArrayList<Statement>> eckgMap,
+                                                                                  HashMap<String, ArrayList<Statement>> seckgMap) {
+
+        ArrayList<String> eventArrayList = new ArrayList<>(); //// just for counting
+        HashMap<String, ArrayList<Statement>> mergedIncidentEventMap = new HashMap<>();
+        for (Map.Entry<String, ArrayList<String>> entry : indicentEventIndex.entrySet()) {
+            String incidentKey = entry.getKey()+"#incident"+"#"+taskSubType;
+            ArrayList<Statement> incidentStatements = new ArrayList<>();
+            ArrayList<String> indidentFiles = entry.getValue();
+            /// we collect all events across all incidentFiles
+            ArrayList<String> events = new ArrayList<>();
+            for (int i = 0; i < indidentFiles.size(); i++) {
+                String incidentFile = indidentFiles.get(i);
+                events.addAll(documentEventIndex.get(incidentFile));
+            }
+            /// we get all locations and all participants
+            ArrayList<Statement> allLocations = getLocationStatements(events, eckgMap, seckgMap);
+            /// do we also need all time anchors???
+            /// what do we do with conflicting locations and time anchors?
+
+            //// we also get all participants from the complete file
+            ArrayList<Statement> allParticipants = new ArrayList<>();
+            ArrayList<Statement> allParticipantCandidates = getParticipantStatements(events, eckgMap, seckgMap);
+            for (int k = 0; k < allParticipantCandidates.size(); k++) {
+                Statement statement = allParticipantCandidates.get(k);
+                //// we check if this is not a location
+                if (!TrigUtil.hasStatement(allLocations, statement)) {
+                    allParticipants.add(statement);
+                }
+            }
+
+            ArrayList<Statement> killList = new ArrayList<>();
+            ArrayList<Statement> hitList = new ArrayList<>();
+            ArrayList<Statement> injureList = new ArrayList<>();
+            ArrayList<Statement> burnList = new ArrayList<>();
+            ArrayList<Statement> dismissList = new ArrayList<>();
+            /// we first collect all statements per event type (HIT, DEAD, INJURE, BURN, DISMISS) with their participants
+            /// we assign these later to the ones without participants
+            for (int j = 0; j < events.size(); j++) {
+                String event = events.get(j);
+                ArrayList<Statement> eventStatements = eckgMap.get(event);
+                String eventType = EventTypes.getEventType(eventStatements);
+                ArrayList<Statement> participants = new ArrayList<>();
+                ArrayList<Statement> participantCandidates = Participants.getEntityParticipantStatements(seckgMap, eventStatements);
+                for (int k = 0; k < participantCandidates.size(); k++) {
+                    Statement statement = participantCandidates.get(k);
+                    //// we check if this is not a location
+                    if (!TrigUtil.hasStatement(allLocations, statement)) {
+                        participants.add(statement);
+                    }
+                }
+                participants.addAll(Participants.getNonEntityParticipantStatements(seckgMap, eventStatements));
+                if (participants.size()>0) {
+                   if (eventType.equals(EventTypes.DEAD)) {
+                       killList.addAll(participants);
+                   }
+                   else if (eventType.equals(EventTypes.INJURED)) {
+                      injureList.addAll(participants);
+                   }
+                   else if (eventType.equals(EventTypes.HIT)) {
+                      hitList.addAll(participants);
+                   }
+                   else if (eventType.equals(EventTypes.BURN)) {
+                      burnList.addAll(participants);
+                   }
+                   else if (eventType.equals(EventTypes.DISMISS)) {
+                      dismissList.addAll(participants);
+                   }
+                }
+            }
+
+            //// now we iterate again over the events and try to differentiate
+            for (int j = 0; j < events.size(); j++) {
+                String event = events.get(j);
+                ArrayList<Statement> eventStatements = eckgMap.get(event);
+                String eventType = EventTypes.getEventType(eventStatements);
+                if (eventType.isEmpty()) {
+                   // System.out.println("empty event:" + event);
+                    continue;
+                }
+                //// Instance level match
+                if (eventType.equals(EventTypes.INCIDENT) ||
+                        eventType.equals(EventTypes.SHOOT) ||
+                        eventType.equals(EventTypes.BURN) ||
+                        eventType.equals(EventTypes.DISMISS)) {
                     eventArrayList.add(incidentKey);
                     incidentStatements.addAll(aggregateStatements(incidentKey, eventType, eventStatements, allParticipants, allLocations ));
                 }
@@ -313,43 +472,40 @@ public class DocumentIdentity {
     }
 
     static ArrayList<Statement> aggregateStatements (String incidentKey, ArrayList<Statement> statements) {
-        Dataset ds = TDBFactory.createDataset();
-        Model instanceModel =  ds.getNamedModel("instances");
         ArrayList<Statement> aggregation = new ArrayList<>();
-        Resource aggregatedEvent = instanceModel.createResource(incidentKey);
+        Resource aggregatedEvent = ResourceFactory.createResource(incidentKey);
         for (int k = 0; k < statements.size(); k++) {
             Statement statement = statements.get(k);
-            Statement aggregatedStatement = instanceModel.createStatement(aggregatedEvent, statement.getPredicate(), statement.getObject());
+            Statement aggregatedStatement = ResourceFactory.createStatement(aggregatedEvent, statement.getPredicate(), statement.getObject());
             aggregation.add(aggregatedStatement);
         }
         return aggregation;
     }
 
     static ArrayList<Statement> aggregateStatements (String incidentKey, String eventType, ArrayList<Statement> statements, ArrayList<Statement> participants, ArrayList<Statement> locations) {
-        Dataset ds = TDBFactory.createDataset();
-        Model instanceModel =  ds.getNamedModel("instances");
-        ArrayList<Statement> aggregation = new ArrayList<>();
-        Resource aggregatedEvent = instanceModel.createResource(incidentKey);
-        Resource eventTypeResource = instanceModel.createResource("http://www.newsreader-project.eu/ontologies/"+eventType);
-        Statement typeStatement = instanceModel.createStatement(aggregatedEvent, RDF.type, eventTypeResource);
+       ArrayList<Statement> aggregation = new ArrayList<>();
+        Resource aggregatedEvent = ResourceFactory.createResource(incidentKey);
+        Resource eventTypeResource = ResourceFactory.createResource("http://www.newsreader-project.eu/ontologies/"+eventType);
+        Statement typeStatement = ResourceFactory.createStatement(aggregatedEvent, RDF.type, eventTypeResource);
         aggregation.add(typeStatement);
         for (int i = 0; i < participants.size(); i++) {
             Statement participant = participants.get(i);
-            Statement aggregatedStatement = instanceModel.createStatement(aggregatedEvent, Sem.hasActor, participant.getObject());
+            Statement aggregatedStatement = ResourceFactory.createStatement(aggregatedEvent, Sem.hasActor, participant.getObject());
             aggregation.add(aggregatedStatement);
         }
         for (int i = 0; i < locations.size(); i++) {
             Statement location = locations.get(i);
-            Statement aggregatedStatement = instanceModel.createStatement(aggregatedEvent, Sem.hasPlace, location.getObject());
+            Statement aggregatedStatement = ResourceFactory.createStatement(aggregatedEvent, Sem.hasPlace, location.getObject());
             aggregation.add(aggregatedStatement);
         }
         for (int k = 0; k < statements.size(); k++) {
             Statement statement = statements.get(k);
             if (statement.getPredicate().getLocalName().equalsIgnoreCase("denotedBy") ||
                     statement.getPredicate().getLocalName().equalsIgnoreCase("label") ||
+                    statement.getPredicate().getLocalName().equalsIgnoreCase("type") ||
                     statement.getPredicate().getLocalName().equalsIgnoreCase("hasTime") ||
             statement.getPredicate().getLocalName().equalsIgnoreCase("prefLabel")) {
-                Statement aggregatedStatement = instanceModel.createStatement(aggregatedEvent, statement.getPredicate(), statement.getObject());
+                Statement aggregatedStatement = ResourceFactory.createStatement(aggregatedEvent, statement.getPredicate(), statement.getObject());
                 aggregation.add(aggregatedStatement);
             }
         }

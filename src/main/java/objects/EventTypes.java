@@ -297,6 +297,33 @@ public class EventTypes {
         return "";
     }
 
+    public static ArrayList<String> getTaskSubTypes (ArrayList<Statement> statements) {
+       ArrayList<String> types = new ArrayList<>();
+       for (int i = 0; i < statements.size(); i++) {
+            Statement statement = statements.get(i);
+            if (statement.getPredicate().getLocalName().equals("type")) {
+                String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
+                if (isShoot(objValue)) types.add(SHOOT);
+                else if (isHit(objValue)) types.add(HIT);
+                else if (isKill(objValue)) types.add(DEAD);
+                else if (isInjury(objValue)) types.add(INJURED);
+                else if (isBurn(objValue)) types.add(BURN);
+                else if (isDismiss(objValue)) types.add(DISMISS);
+            }
+            else if (statement.getPredicate().getLocalName().equals("prefLabel")) {
+                String objValue = statement.getObject().toString();
+                //System.out.println("objValue = " + objValue);
+                if (isShootWord(objValue)) types.add(SHOOT);
+                else if (isHitWord(objValue)) types.add(HIT);
+                else if (isKillWord(objValue)) types.add(DEAD);
+                else if (isInjuryWord(objValue)) types.add(INJURED);
+                else if (isBurnWord(objValue)) types.add(BURN);
+                else if (isDismissWord(objValue)) types.add(DISMISS);
+            }
+        }
+        return types;
+    }
+
     /**
      * KS util
      * @param statements
@@ -386,5 +413,44 @@ public class EventTypes {
         return false;
     }
 
+    public static String getDominantEventTypeFromDataset (HashMap<String, ArrayList<Statement>> tripleMap) {
+        int nShoot = 0;
+        int nBurn = 0;
+        int nDismiss = 0;
+        Set keySet = tripleMap.keySet();
+        Iterator<String> keys = keySet.iterator();
+        while (keys.hasNext()) {
+            String tripleKey = keys.next();
+            if (Util.isEventKey(tripleKey)) {
+                ArrayList<Statement> statements = tripleMap.get(tripleKey);
+                ArrayList<String> taskSubTypes = getTaskSubTypes(statements);
+                for (int i = 0; i < taskSubTypes.size(); i++) {
+                    String subType = taskSubTypes.get(i);
+                    if (subType.equals(SHOOT)) {
+                        nShoot++;
+                    }
+                    else if (subType.equals(BURN)) {
+                        nBurn++;
+                    }
+                    else if (subType.equals(DISMISS)) {
+                        nDismiss++;
+                    }
+                    else if (subType.equals(DEAD)) {
+                        //// in case of dead dismiss is punished
+                        nDismiss--;
+                    }
+                    else if (subType.equals(INJURED)) {
+                        //// in case of injured dismiss is punished
+                        nDismiss--;
+                    }
+                }
+            }
+        }
+        String eventType = "";
+        if (nBurn>nShoot && nBurn>=nDismiss) eventType = BURN;
+        if (nDismiss>nShoot && nDismiss>=nBurn) eventType = DISMISS;
+        if (nShoot>=nBurn && nShoot>=nDismiss) eventType = SHOOT;
+        return eventType;
+    }
 
 }
