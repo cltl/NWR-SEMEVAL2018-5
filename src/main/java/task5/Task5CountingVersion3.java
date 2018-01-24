@@ -53,9 +53,11 @@ public class Task5CountingVersion3 {
     static public boolean LOGGING = false;
     static OutputStream locationlog = null;
     static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/questions.json " +
-            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/eckg --subtask s3" +
-            " --cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel --states /Users/piek/Desktop/SemEval2018/scripts/states.rel";
+            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/eckg --subtask s3 " +
+            "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel --states /Users/piek/Desktop/SemEval2018/scripts/states.rel " +
+            "--week";
     static String subtask = ""; // s1, s2, s3
+    static boolean weeks = false;
     static public void main(String[] args) {
 
         String pathToQuestionFile = "";
@@ -72,6 +74,9 @@ public class Task5CountingVersion3 {
             }
             else if (arg.equals("--subtask") && args.length>(i+1)) {
                 subtask = args[i+1];
+            }
+            else if (arg.equals("--week")) {
+                weeks = true;
             }
             else if (arg.equals("--task") && args.length>(i+1)) {
                 taskFolder = args[i+1];
@@ -143,6 +148,9 @@ public class Task5CountingVersion3 {
                    System.out.println("city = " + questiondata.getCity());
                    System.out.println("first = " + questiondata.getParticipant_first());
                    System.out.println("last = " + questiondata.getParticipant_last());
+                   /// Depending on the type of events from the query, we process a different set of trig files
+                   /// Trig files are divided on the basis of the dominant type over different subfolders: SHOOT, BURN, DISMISS
+                   /// Within each subfolder, a separate <date>.trig file is created
                    ArrayList<File> myTrigFiles = new ArrayList<>();
                    String eventType = "SHOOT";
                    if (questiondata.getEvent_type().equals("fire_burning")) {
@@ -155,14 +163,28 @@ public class Task5CountingVersion3 {
                    ArrayList<File> eckgFiles = Util.makeRecursiveFileList(eckgFolder, ".trig");
                    for (int i = 0; i < eckgFiles.size(); i++) {
                        File eckGFile = eckgFiles.get(i);
-                       if (dateString.isEmpty() || eckGFile.getName().startsWith(dateString)) {
+                       if (dateString.isEmpty()) {
                            /// by using startWith,
                            // we ensure that constraints for just the year or month
                            // still match with specific dates
                            // If there is no time constraints, all TrigFiles are considered
                            myTrigFiles.add(eckGFile);
                        }
-                       else if (TemporalReasoning.matchWeekConstraint(dateString, eckGFile.getName())){ ///////
+                       else if (weeks) {
+                           if (dayString.isEmpty()) {
+                               /// the time constraint is a month or year
+                               /// we take all trig files that start with year or year+month
+                               if (eckGFile.getName().startsWith(dateString)) {
+                                  myTrigFiles.add(eckGFile);
+                               }
+                           }
+                           else if (TemporalReasoning.matchNextWeekConstraint(dayString, eckGFile.getName())) {
+                               /// we expand the question date (day) to the week after to capture all trig files based on document creation time
+                               /// and are published after the incident date
+                               myTrigFiles.add(eckGFile);
+                           }
+                       }
+                       else if (eckGFile.getName().startsWith(dateString)) {
                            myTrigFiles.add(eckGFile);
                        }
                    }

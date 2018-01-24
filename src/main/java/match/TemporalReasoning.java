@@ -15,14 +15,24 @@ import java.util.*;
 
 public class TemporalReasoning {
 
-    static public boolean matchWeekConstraint (String dayString, String eckgFileName) {
+    static public void main (String[] args) {
+       String dateString = "20170127";
+        System.out.println("dateString = " + dateString);
+       Time time = new Time();
+       time.parseDateString(dateString);
+       ArrayList<Time> week = time.getNextWeek();
+        for (int i = 0; i < week.size(); i++) {
+            Time time1 = week.get(i);
+            System.out.println("time1.toYearMonthDayString() = " + time1.toYearMonthDayString());
+        }
+    }
+    static public boolean matchNextWeekConstraint (String dayString, String eckgFileName) {
          Time time = new Time();
          time.parseDateString(dayString);
-         ArrayList<Time> week = time.getWeek();
+         ArrayList<Time> week = time.getNextWeek();
          for (int i = 0; i < week.size(); i++) {
             Time time1 = week.get(i);
-            if (eckgFileName.startsWith(time1.toYearMonthDayString())) return true;
-
+            if (eckgFileName.equals(time1.toYearMonthDayString())) return true;
          }
          return false;
     }
@@ -161,6 +171,113 @@ public class TemporalReasoning {
         return containers;
     }
 
+    static public HashMap<String, ArrayList<File>> getTemporalWeekContainersWithTrigFiles (
+            ArrayList<File> trigFiles) {
+        HashMap<String, ArrayList<File>> containers = new HashMap<String, ArrayList<File>>();
+        for (int i = 0; i < trigFiles.size(); i++) {
+            File trigFile = trigFiles.get(i);
+           // System.out.println("trigFile = " + trigFile.getName());
+            Dataset dataset = RDFDataMgr.loadDataset(trigFile.getAbsolutePath());
+            ArrayList<Statement> timeStatements = getTimeStatements(dataset);
+            ArrayList<Time> dominantTimes = getDominantTimes(timeStatements, false);
+            if (dominantTimes.size()>0) {
+                ///// there can be multiple dates, if  So files are copied to multiple buckets
+                for (int j = 0; j < dominantTimes.size(); j++) {
+                    Time time = dominantTimes.get(j);
+                    String timeString = time.toYearMonthWeekString();
+                    if (containers.containsKey(timeString)) {
+                        ArrayList<File> files = containers.get(timeString);
+                        files.add(trigFile);
+                        containers.put(timeString, files);
+                    } else {
+                        ArrayList<File> files = new ArrayList<>();
+                        files.add(trigFile);
+                        containers.put(timeString, files);
+                    }
+                }
+            }
+            else {
+                String documentCreationTime = getDocumentCreationTime(dataset).toYearMonthWeekString();
+                //System.out.println("documentCreationTime = " + documentCreationTime);
+                if (containers.containsKey(documentCreationTime)) {
+                    ArrayList<File> files = containers.get(documentCreationTime);
+                    files.add(trigFile);
+                    containers.put(documentCreationTime, files);
+                } else {
+                    ArrayList<File> files = new ArrayList<>();
+                    files.add(trigFile);
+                    containers.put(documentCreationTime, files);
+                }
+            }
+        }
+        return containers;
+    }
+
+    static public HashMap<String, ArrayList<File>> getTemporalWeekendContainersWithTrigFiles (
+            ArrayList<File> trigFiles) {
+        HashMap<String, ArrayList<File>> containers = new HashMap<String, ArrayList<File>>();
+        for (int i = 0; i < trigFiles.size(); i++) {
+            File trigFile = trigFiles.get(i);
+           // System.out.println("trigFile = " + trigFile.getName());
+            Dataset dataset = RDFDataMgr.loadDataset(trigFile.getAbsolutePath());
+            ArrayList<Statement> timeStatements = getTimeStatements(dataset);
+            ArrayList<Time> dominantTimes = getDominantTimes(timeStatements, false);
+            if (dominantTimes.size()>0) {
+                ///// there can be multiple dates, if  So files are copied to multiple buckets
+                for (int j = 0; j < dominantTimes.size(); j++) {
+                    Time time = dominantTimes.get(j);
+                    String timeString = time.toYearMonthString();
+                    Time nextMonday = time.getNextMonday();
+                    Time nextFriday = time.getNextFriday();
+                    if (nextMonday.before(nextFriday)) {
+                        timeString = nextMonday.toYearMonthDayString();
+                    }
+                    else {
+                        timeString = nextFriday.toYearMonthDayString();
+                    }
+                    if (containers.containsKey(timeString)) {
+                        ArrayList<File> files = containers.get(timeString);
+                        files.add(trigFile);
+                        containers.put(timeString, files);
+                    } else {
+                        ArrayList<File> files = new ArrayList<>();
+                        files.add(trigFile);
+                        containers.put(timeString, files);
+                    }
+                }
+            }
+            else {
+                Time documentCreationTime = getDocumentCreationTime(dataset);
+                //System.out.println("documentCreationTime = " + documentCreationTime);
+                String timeString = documentCreationTime.toYearMonthString();
+
+                Time nextMonday = documentCreationTime.getNextMonday();
+                Time nextFriday = documentCreationTime.getNextFriday();
+                if (nextMonday.before(nextFriday)) {
+                    timeString = nextMonday.toYearMonthDayString();
+                }
+                else {
+                    timeString = nextFriday.toYearMonthDayString();
+                }
+                if (containers.containsKey(timeString)) {
+                    ArrayList<File> files = containers.get(timeString);
+                    files.add(trigFile);
+                    containers.put(timeString, files);
+                } else {
+                    ArrayList<File> files = new ArrayList<>();
+                    files.add(trigFile);
+                    containers.put(timeString, files);
+                }
+            }
+        }
+        return containers;
+    }
+
+    /**
+     * Duplicates trig files for previous & next week
+     * @param trigFiles
+     * @return
+     */
     static public HashMap<String, ArrayList<File>> getLooseTemporalContainersWithTrigFiles (
             ArrayList<File> trigFiles) {
         HashMap<String, ArrayList<File>> containers = new HashMap<String, ArrayList<File>>();
@@ -176,7 +293,12 @@ public class TemporalReasoning {
             ArrayList<Time> allWeeks = new ArrayList<>();
             for (int j = 0; j < dominantTimes.size(); j++) {
                 Time time = dominantTimes.get(j);
-                ArrayList<Time> week = time.getWeek();
+                ArrayList<Time> week = time.getPreviousWeek();
+                for (int k = 0; k < week.size(); k++) {
+                    Time time1 = week.get(k);
+                    Time.addToTimeList(allWeeks, time1);
+                }
+                week = time.getNextWeek();
                 for (int k = 0; k < week.size(); k++) {
                     Time time1 = week.get(k);
                     Time.addToTimeList(allWeeks, time1);

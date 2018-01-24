@@ -34,7 +34,7 @@ import java.util.Set;
  * We are now dealing with one big CoNLL file instead of many separate files.
  */
 public class Task5EventCorefVersion2 {
-
+    static int nJoined = 0;
     static ArrayList<String> allEventKeys = new ArrayList<>();
 
     static String trialParameters = "--trig-files /Users/piek/Desktop/SemEval2018/trial_data_final/NAFDONE.ALL " +
@@ -181,7 +181,7 @@ public class Task5EventCorefVersion2 {
           /// we need some similarity function that compares the events across trigfiles with the same or similar DCT
 
           HashMap<String, ArrayList<String>> indicentEventIndex =
-                  DocumentIdentity.getIncidentEventMapFromDocuments1(documentEventIndex, eckgMap, seckgMap, matchSettings );
+                  DocumentIdentity.getIncidentEventMapFromDocuments1(documentEventIndex, eckgMap, seckgMap, matchSettings, nJoined );
 
           containerIncidents =
                   DocumentIdentity.getIndicentEventsWithStatements(

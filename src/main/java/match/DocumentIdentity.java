@@ -37,7 +37,7 @@ public class DocumentIdentity {
     static public HashMap<String, ArrayList<String>> getIncidentEventMapFromDocuments1 (HashMap<String, ArrayList<String>> documentEventIndex,
                                                                                      HashMap<String, ArrayList<Statement>> eckgMap,
                                                                                      HashMap<String, ArrayList<Statement>> seckgMap,
-                                                                                     MatchSettings matchSettings) {
+                                                                                     MatchSettings matchSettings, int nJoined) {
         HashMap<String, ArrayList<String>> indicentEventIndex = new HashMap<>();
         int nJoinedIncidentFiles = 0;
         ArrayList<String> processedFiles = new ArrayList<>();
@@ -92,8 +92,7 @@ public class DocumentIdentity {
                         }
                     }
                 }
-
-                //System.out.println("processedFiles = " + processedFiles.toString());
+                //System.out.println("processedFiles = " + processedFiles.size());
                 indicentEventIndex.put(entry1.getKey(), mergedFiles);
             }
             else {
@@ -101,6 +100,7 @@ public class DocumentIdentity {
             }
         }
         System.out.println("nJoinedIncidentFiles = " + nJoinedIncidentFiles);
+        nJoined +=nJoinedIncidentFiles;
         return indicentEventIndex;
     }
 

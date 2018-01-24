@@ -16,10 +16,6 @@ died	DEAD
 dies	DEAD
 drama	INCIDENT
 fatal	DEAD
-fire	SHOOT
-fired	SHOOT
-fires	SHOOT
-firing	SHOOT
 grieve	DEAD
 grieving	DEAD
 gun	SHOOT
@@ -77,3 +73,12 @@ weapons	SHOOT
 wound	INJURED
 wounded	INJURED
 wounds	INJURED
+discharge	DISMISS
+dismiss	DISMISS
+dismissal	DISMISS
+let-go	DISMISS
+lay-off	DISMISS
+terminate	DISMISS
+termination	DISMISS
+sack	DISMISS
+downsize	DISMISS

@@ -51,11 +51,12 @@ public class EventTypes {
                 "fn:Recovery", "fn:Resurrection"};
 
     static final String[] hitTypes = { "fn:Cause_impact","fn:Hit_target"};
-
-    static final String[] shootTypes = { "fn:Shoot_projectiles", "fn:Use_firearm","fn:Firing"};
+    static final String[] shootTypes = { "fn:Shoot_projectiles", "fn:Use_firearm"};
     static final String[] burnTypes = { "fn:Absorb_heat", "fn:Apply_heat","fn:Setting_fire", "fn:Fire_burning", "fn:Fire_going_out"};
-    static final String[] dismissTypes = {"fn:Quitting_a_place","fn:Quitting", "fn:Get_a_job","fn:Hiring","fn:Employing",
-            "fn:Being_employed", "fn:Earnings_and_losses", "fn:Change_of_leadership", "fn:Personal_relationship", "fn:Working_a_post"};
+    /*static final String[] dismissTypes = {"fn:Quitting_a_place","fn:Quitting", "fn:Get_a_job","fn:Hiring","fn:Employing",
+            "fn:Being_employed", "fn:Earnings_and_losses", "fn:Change_of_leadership", "fn:Personal_relationship", "fn:Working_a_post"};  */
+    static final String[] dismissTypes = {"fn:Firing", "fn:Quitting_a_place","fn:Quitting", "fn:Get_a_job","fn:Hiring","fn:Employing",
+            "fn:Being_employed"};
 
     static ArrayList<String> killWords = new ArrayList<>();
     static ArrayList<String> incidentWords = new ArrayList<>();
@@ -428,6 +429,7 @@ public class EventTypes {
                     String subType = taskSubTypes.get(i);
                     if (subType.equals(SHOOT)) {
                         nShoot++;
+                        nBurn--;
                     }
                     else if (subType.equals(BURN)) {
                         nBurn++;
