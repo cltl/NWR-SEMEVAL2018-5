@@ -55,9 +55,9 @@ public class Task5CountingVersion3 {
     static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/questions.json " +
             "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/eckg --subtask s3 " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel --states /Users/piek/Desktop/SemEval2018/scripts/states.rel " +
-            "--week";
+            "--period weekend";
     static String subtask = ""; // s1, s2, s3
-    static boolean weeks = false;
+    static String period = "weekend"; // day, week
     static public void main(String[] args) {
 
         String pathToQuestionFile = "";
@@ -75,8 +75,8 @@ public class Task5CountingVersion3 {
             else if (arg.equals("--subtask") && args.length>(i+1)) {
                 subtask = args[i+1];
             }
-            else if (arg.equals("--week")) {
-                weeks = true;
+            else if (arg.equals("--period")&& args.length>(i+1)) {
+                period = args[i+1];
             }
             else if (arg.equals("--task") && args.length>(i+1)) {
                 taskFolder = args[i+1];
@@ -159,33 +159,45 @@ public class Task5CountingVersion3 {
                    else if (questiondata.getEvent_type().equals("job_firing")) {
                        eventType = EventTypes.DISMISS;
                    }
+                   //// we only load the files for the requested event type
                    File eckgFolder = new File (eckgFolderPath+"/"+eventType);
                    ArrayList<File> eckgFiles = Util.makeRecursiveFileList(eckgFolder, ".trig");
                    for (int i = 0; i < eckgFiles.size(); i++) {
                        File eckGFile = eckgFiles.get(i);
+                       //// we check the date constraints
                        if (dateString.isEmpty()) {
-                           /// by using startWith,
-                           // we ensure that constraints for just the year or month
-                           // still match with specific dates
-                           // If there is no time constraints, all TrigFiles are considered
+                           /// there is no time constraint so we take all files
                            myTrigFiles.add(eckGFile);
                        }
-                       else if (weeks) {
-                           if (dayString.isEmpty()) {
-                               /// the time constraint is a month or year
-                               /// we take all trig files that start with year or year+month
-                               if (eckGFile.getName().startsWith(dateString)) {
-                                  myTrigFiles.add(eckGFile);
-                               }
-                           }
-                           else if (TemporalReasoning.matchNextWeekConstraint(dayString, eckGFile.getName())) {
+                       else if (dayString.isEmpty()) {
+                              /// the time constraint is a month or year
+                              /// we take all trig files that start with year or year+month
+                              /// we do not need to worry about day matches, weekends or week
+                              if (eckGFile.getName().startsWith(dateString)) {
+                                 myTrigFiles.add(eckGFile);
+                              }
+                       }
+                       else if (period.equalsIgnoreCase("weekend")) {
+                           if (TemporalReasoning.matchWeekendConstraint(dayString, eckGFile.getName())) {
                                /// we expand the question date (day) to the week after to capture all trig files based on document creation time
                                /// and are published after the incident date
                                myTrigFiles.add(eckGFile);
                            }
                        }
-                       else if (eckGFile.getName().startsWith(dateString)) {
-                           myTrigFiles.add(eckGFile);
+                       else if (period.equalsIgnoreCase("week")) {
+                           if (TemporalReasoning.matchNextWeekConstraint(dayString, eckGFile.getName())) {
+                               /// we expand the question date (day) to the week after to capture all trig files based on document creation time
+                               /// and are published after the incident date
+                               myTrigFiles.add(eckGFile);
+                           }
+                       }
+                       else if (period.equalsIgnoreCase("day")) {
+                           if (eckGFile.getName().startsWith(dateString)) {
+                               myTrigFiles.add(eckGFile);
+                           }
+                       }
+                       else {
+                           System.out.println("unknown settings period = " + period);
                        }
                    }
                    System.out.println("myTrigFiles.size() = " + myTrigFiles.size());
@@ -347,12 +359,12 @@ public class Task5CountingVersion3 {
                                 String label = participantStatement.getObject().asLiteral().getLexicalForm();
                                 if (!questiondata.getParticipant_first().isEmpty() &&
                                         label.toLowerCase().startsWith(questiondata.getParticipant_first().toLowerCase())) {
-                                    System.out.println("label = " + label);
+                                    //System.out.println("label = " + label);
                                     FIRST = true;
                                 }
                                 if (!questiondata.getParticipant_last().isEmpty() &&
                                         label.toLowerCase().endsWith(questiondata.getParticipant_last().toLowerCase())) {
-                                    System.out.println("label = " + label);
+                                    //System.out.println("label = " + label);
                                     LAST = true;
                                 }
                             }

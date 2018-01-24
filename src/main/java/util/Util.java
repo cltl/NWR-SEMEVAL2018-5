@@ -12,7 +12,15 @@ import java.util.*;
  */
 public class Util {
 
-
+    static public boolean hasFile (ArrayList<File> files, File file) {
+        for (int i = 0; i < files.size(); i++) {
+            File file1 = files.get(i);
+            if (file1.getName().equals(file.getName())) {
+                 return true;
+             }
+        }
+        return false;
+    }
 
         static public String getPrefLabel (String uri, HashMap<String, ArrayList<Statement>> map) {
             String prefLabel = "";

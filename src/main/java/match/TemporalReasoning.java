@@ -7,6 +7,7 @@ import com.hp.hpl.jena.rdf.model.StmtIterator;
 import objects.Time;
 import org.apache.jena.riot.RDFDataMgr;
 import question.Questiondata;
+import util.Util;
 import vu.cltl.triple.objects.TrigTripleData;
 import vu.cltl.triple.TrigUtil;
 
@@ -33,6 +34,24 @@ public class TemporalReasoning {
          for (int i = 0; i < week.size(); i++) {
             Time time1 = week.get(i);
             if (eckgFileName.equals(time1.toYearMonthDayString())) return true;
+         }
+         return false;
+    }
+
+    static public boolean matchWeekendConstraint (String dayString, String eckgFileName) {
+         String timeString = dayString;
+         Time time = new Time();
+         time.parseDateString(dayString);
+         Time nextMonday = time.getNextMonday();
+         Time nextFriday = time.getNextFriday();
+         if (nextMonday.before(nextFriday)) {
+            timeString = nextMonday.toYearMonthDayString();
+         }
+         else {
+            timeString = nextFriday.toYearMonthDayString();
+         }
+         if (eckgFileName.startsWith(timeString)) {
+             return true;
          }
          return false;
     }
@@ -237,8 +256,10 @@ public class TemporalReasoning {
                     }
                     if (containers.containsKey(timeString)) {
                         ArrayList<File> files = containers.get(timeString);
-                        files.add(trigFile);
-                        containers.put(timeString, files);
+                        if (!Util.hasFile(files, trigFile)) {
+                            files.add(trigFile);
+                            containers.put(timeString, files);
+                        }
                     } else {
                         ArrayList<File> files = new ArrayList<>();
                         files.add(trigFile);

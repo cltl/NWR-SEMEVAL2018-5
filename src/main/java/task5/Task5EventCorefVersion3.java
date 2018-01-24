@@ -42,14 +42,14 @@ public class Task5EventCorefVersion3 {
             "--event-file /Users/piek/Desktop/SemEval2018/scripts/trial_vocabulary " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel " +
             "--states /Users/piek/Desktop/SemEval2018/scripts/states.rel " +
-            "--threshold 2 --period weekend";
+            "--threshold 1 --period weekend";
 
     static String testParameters = "--trig-files /Users/piek/Desktop/SemEval2018/test_data/NAFOUT " +
             "--conll-file /Users/piek/Desktop/SemEval2018/test_data/input/s3/docs.conll " +
             "--event-file /Users/piek/Desktop/SemEval2018/scripts/trial_vocabulary " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel " +
             "--states /Users/piek/Desktop/SemEval2018/scripts/states.rel " +
-            "--threshold 2 --period weekend";
+            "--threshold 1 --period weekend";
 
     static public void main(String[] args) {
         String pathToTrigFiles = "";
@@ -200,7 +200,6 @@ public class Task5EventCorefVersion3 {
      * @return
      */
     static HashMap<String, ArrayList<File>> getContainerEventsPerType (ArrayList<File> containerTrigFiles) {
-
           HashMap<String, ArrayList<File>> eventTypeDocumentIndex = new HashMap<>();
           for (int i = 0; i < containerTrigFiles.size(); i++) {
               File timeTrigFile = containerTrigFiles.get(i);
@@ -208,15 +207,7 @@ public class Task5EventCorefVersion3 {
               String taskSubType = EventTypes.getDominantEventTypeFromDataset(trigTripleData.tripleMapInstances);
               if (eventTypeDocumentIndex.containsKey(taskSubType)) {
                   ArrayList<File> files = eventTypeDocumentIndex.get(taskSubType);
-                  boolean match = false;
-                  for (int j = 0; j < files.size(); j++) {
-                      File file = files.get(j);
-                      if (file.getName().equals(timeTrigFile.getName())) {
-                          match = true;
-                          break;
-                      }
-                  }
-                  if (!match) {
+                  if (!Util.hasFile(files, timeTrigFile)) {
                       files.add(timeTrigFile);
                       eventTypeDocumentIndex.put(taskSubType, files);
                   }
