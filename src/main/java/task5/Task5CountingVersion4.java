@@ -19,8 +19,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 
-import static objects.EventTypes.eventInjuryMatch;
-import static objects.EventTypes.eventKillMatch;
+import static objects.EventTypes.*;
 
 /**
  * Created by piek on 10/11/2017.
@@ -29,7 +28,7 @@ import static objects.EventTypes.eventKillMatch;
  * We therefore separated the event coreference from answering the questions. The event coreference considers all the documents and all events within the documents
  *
  */
-public class Task5CountingVersion3 {
+public class Task5CountingVersion4 {
 
     /**
      * S1
@@ -53,7 +52,7 @@ public class Task5CountingVersion3 {
     static public boolean LOGGING = false;
     static OutputStream locationlog = null;
     static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s1/questions.json " +
-            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/eckg-dct --subtask s1 " +
+            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/eckg-4-dct --subtask s1 " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel --states /Users/piek/Desktop/SemEval2018/scripts/states.rel " +
             "--period dct  --log";
     static String subtask = ""; // s1, s2, s3
@@ -199,6 +198,13 @@ public class Task5CountingVersion3 {
                            if (eckGFile.getName().startsWith(dateString)) {
                                myTrigFiles.add(eckGFile);
                            }
+                           else if (eckGFile.getName().endsWith("00")) {
+                               String eckGshort = eckGFile.getName().substring(0, eckGFile.getName().length()-3);
+                               System.out.println("eckGshort = " + eckGshort);
+                               if (dateString.startsWith(eckGshort)) {
+                                   myTrigFiles.add(eckGFile);
+                               }
+                           }
                        }
                        else {
                            System.out.println("unknown settings period = " + period);
@@ -323,6 +329,9 @@ public class Task5CountingVersion3 {
 
     static ArrayList<String> getQuestionDataEventKeys (TrigTripleData trigTripleData,
                                                        Questiondata questiondata) {
+        int nTypeMismatch = 0;
+        int nLocMismatch = 0;
+        int nPartMismatch = 0;
         String logString = "";
         ArrayList<String> keys = new ArrayList<>();
         Set keySet = trigTripleData.tripleMapInstances.keySet();
@@ -333,6 +342,9 @@ public class Task5CountingVersion3 {
             boolean MATCH = true;
             if (!checkSubeventType(questiondata, statements)) {
                 //System.out.println("WRONG TYPE");
+                //ArrayList<String> types = getEventTypesAndSubevent(statements);
+                //System.out.println(questiondata.getEvent_type()+" mismatching types.toString() = " + types.toString());
+                nTypeMismatch++;
                 MATCH = false;
             }
             else {
@@ -341,6 +353,7 @@ public class Task5CountingVersion3 {
             if (MATCH) {
                 ArrayList<String> matchingLocations = getMatchingLocations(questiondata, statements, trigTripleData);
                 if (matchingLocations.isEmpty()) {
+                    nLocMismatch++;
                     MATCH = false;
                 } else {
                     if (!matchingLocations.contains("NOTREQUIRED")) {
@@ -359,6 +372,7 @@ public class Task5CountingVersion3 {
             if (MATCH) {
                 ArrayList<String> matchingParticipants = getMatchingParticipantNames(questiondata, statements, trigTripleData);
                 if (matchingParticipants.isEmpty()) {
+                    nPartMismatch++;
                     MATCH = false;
                 } else {
                     if (!matchingParticipants.contains("NOTREQUIRED")) {
@@ -383,6 +397,9 @@ public class Task5CountingVersion3 {
         }
         System.out.println("Nr. of matching incidents and subevents keys = " + keys.size());
         logString +="\tNr. of matching incidents and subevents keys = " + keys.size()+"\n";
+        if (keys.size()==0) {
+            logString += "\t" + "type mismatches = " + nTypeMismatch + "," + "location mismatches = " + nLocMismatch + "," + "particpant mismatches = " + nPartMismatch + "\n";
+        }
         if (LOGGING) {
             try {
                 locationlog.write(logString.getBytes());
@@ -759,6 +776,12 @@ static ArrayList<String> getMatchingParticipantNames (Questiondata questiondata,
             return true;
         }
         if (questiondata.getEvent_type().equals("injuring") && eventInjuryMatch(statements)) {
+            return true;
+        }
+        if (questiondata.getEvent_type().equals("job_firing") && eventDismissMatch(statements)) {
+            return true;
+        }
+        if (questiondata.getEvent_type().equals("fire_burning") && eventBurningMatch(statements)) {
             return true;
         }
         return false;

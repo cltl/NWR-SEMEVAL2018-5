@@ -88,11 +88,10 @@ public class TemporalReasoning {
             time:inDateTime  <http://www.newsreader-project.eu/time/20170112> .
      */
     static public String getDocumentCreationTime(File trigFile) {
-        String dct = "";
         Dataset dataset = RDFDataMgr.loadDataset(trigFile.getAbsolutePath());
-        getDocumentCreationTime(dataset);
+        Time time = getDocumentCreationTime(dataset);
         dataset.close();
-        return dct;
+        return time.toYearMonthDayString();
     }
 
     static public Time getDocumentCreationTime(Dataset dataset) {

@@ -39,6 +39,7 @@ public class Task5EventCorefVersion3 {
 
     static String trialParameters = "--trig-files /Users/piek/Desktop/SemEval2018/trial_data_final/NAFDONE.ALL " +
             "--conll-file /Users/piek/Desktop/SemEval2018/trial_data_final/input/s3/docs.conll " +
+            "--eckg /Users/piek/Desktop/SemEval2018/trial_data_final/eckg-weekend " +
             "--event-file /Users/piek/Desktop/SemEval2018/scripts/trial_vocabulary " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel " +
             "--states /Users/piek/Desktop/SemEval2018/scripts/states.rel " +
@@ -46,6 +47,7 @@ public class Task5EventCorefVersion3 {
 
     static String testParameters = "--trig-files /Users/piek/Desktop/SemEval2018/test_data/NAFOUT " +
             "--conll-file /Users/piek/Desktop/SemEval2018/test_data/input/s3/docs.conll " +
+            "--eckg /Users/piek/Desktop/SemEval2018/trial_data_final/eckg-weekend " +
             "--event-file /Users/piek/Desktop/SemEval2018/scripts/trial_vocabulary " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel " +
             "--states /Users/piek/Desktop/SemEval2018/scripts/states.rel " +
@@ -54,11 +56,12 @@ public class Task5EventCorefVersion3 {
     static public void main(String[] args) {
         String pathToTrigFiles = "";
         String pathToConllFile = "";
+        String pathToEckgFolder = "";
         String eventFile = "";
         String cityLex = "";
         String stateLex = "";
         Integer matchThreshold = 0;
-        String period = "weekend"; ///day, week, weekend
+        String period = "weekend"; ///day, week, weekend, dct (document-creation-day)
         MatchSettings matchSettings = new MatchSettings();
         if (args.length==0) args = trialParameters.split(" ");
         for (int i = 0; i < args.length; i++) {
@@ -68,6 +71,9 @@ public class Task5EventCorefVersion3 {
             }
             else if (arg.equals("--conll-file") && args.length>(i+1)) {
                 pathToConllFile = args[i+1];
+            }
+            else if (arg.equals("--eckg") && args.length>(i+1)) {
+                pathToEckgFolder = args[i+1];
             }
             else if (arg.equals("--event-file") && args.length>(i+1)) {
                 eventFile = args[i+1];
@@ -105,9 +111,12 @@ public class Task5EventCorefVersion3 {
         System.out.println("Space.locationURIs.toString() = " + Space.locationURIs.size());
 
         File taskFileFolder = new File (pathToTrigFiles).getParentFile();
-        File eckgFolder = new File (taskFileFolder.getAbsolutePath()+"/"+"eckg");
+        File eckgFolder = new File (pathToEckgFolder);
         if (!eckgFolder.exists()) eckgFolder.mkdir();
-
+        if (!eckgFolder.exists()) {
+            System.out.println("Cannot find folder for ECKGs = "+eckgFolder.getAbsolutePath());
+            return;
+        }
         /// our first approach is event driven. Since we expect one incident per source document, we probably can better
         /// use the document as a starting point:
         // 1. group documents per temporal container
@@ -129,6 +138,9 @@ public class Task5EventCorefVersion3 {
         }
         else if (period.equalsIgnoreCase("day")) {
             temporalContainers = TemporalReasoning.getTemporalContainersWithTrigFiles(trigFiles);
+        }
+        else if (period.equalsIgnoreCase("dct")) {
+            temporalContainers = TemporalReasoning.getDocumentCreationTimeContainersWithTrigFiles(trigFiles);
         }
         else if (period.equalsIgnoreCase("weekend")) {
             temporalContainers = TemporalReasoning.getTemporalWeekendContainersWithTrigFiles(trigFiles);
@@ -257,7 +269,7 @@ public class Task5EventCorefVersion3 {
 
           /// we need some similarity function that compares the events across trigfiles with same incident time and same event type
           HashMap<String, ArrayList<String>> indicentEventIndex =
-                  DocumentIdentity.getIncidentEventMapFromDocuments1(documentEventIndex, eckgMap, seckgMap, matchSettings, nJoined);
+                  DocumentIdentity.getIncidentTrigFileMapFromDocuments1(documentEventIndex, eckgMap, seckgMap, matchSettings, nJoined);
           System.out.println("Nr of incidents, indicentEventIndex.size() = " + indicentEventIndex.size());
 
           containerIncidents =

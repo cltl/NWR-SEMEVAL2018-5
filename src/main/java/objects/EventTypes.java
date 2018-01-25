@@ -381,18 +381,33 @@ public class EventTypes {
         return false;
     }
 
+    public static ArrayList<String> getEventTypesAndSubevent (ArrayList<Statement> statements) {
+        ArrayList<String> types = new ArrayList<>();
+        for (int i = 0; i < statements.size(); i++) {
+            Statement statement = statements.get(i);
+            if (statement.getPredicate().getLocalName().equals("type") || statement.getPredicate().getLocalName().equals("hasSubType")) {
+                String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
+                if (!types.contains(objValue)) types.add(objValue);
+            }
+        }
+        return types;
+    }
     public static boolean eventKillMatch (ArrayList<Statement> statements) {
         for (int i = 0; i < statements.size(); i++) {
             Statement statement = statements.get(i);
-            if (statement.getPredicate().getLocalName().equals("type")) {
+            if (statement.getPredicate().getLocalName().equals("type") || statement.getPredicate().getLocalName().equals("hasSubType")) {
                 String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
-               // System.out.println("objValue = " + objValue);
                 if (objValue.equals(EventTypes.DEAD))  {
+                   // System.out.println("objValue = " + objValue);
                     return true;
                 }
                 else if (EventTypes.isKill(objValue))  {
+                   // System.out.println("objValue = " + objValue);
                     return true;
                 }
+            }
+            else {
+                //System.out.println("statement.getPredicate().getLocalName() = " + statement.getPredicate().getLocalName());
             }
         }
         return false;
@@ -401,12 +416,44 @@ public class EventTypes {
     public static boolean eventInjuryMatch (ArrayList<Statement> statements) {
         for (int i = 0; i < statements.size(); i++) {
             Statement statement = statements.get(i);
-            if (statement.getPredicate().getLocalName().equals("type")) {
+            if (statement.getPredicate().getLocalName().equals("type") || statement.getPredicate().getLocalName().equals("hasSubType")) {
                 String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
                 if (objValue.equals(EventTypes.INJURED))  {
                     return true;
                 }
                 if (EventTypes.isInjury(objValue))  {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean eventDismissMatch (ArrayList<Statement> statements) {
+        for (int i = 0; i < statements.size(); i++) {
+            Statement statement = statements.get(i);
+            if (statement.getPredicate().getLocalName().equals("type") || statement.getPredicate().getLocalName().equals("hasSubType")) {
+                String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
+                if (objValue.equals(EventTypes.DISMISS))  {
+                    return true;
+                }
+                if (EventTypes.isDismiss(objValue))  {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean eventBurningMatch (ArrayList<Statement> statements) {
+        for (int i = 0; i < statements.size(); i++) {
+            Statement statement = statements.get(i);
+            if (statement.getPredicate().getLocalName().equals("type") || statement.getPredicate().getLocalName().equals("hasSubType")) {
+                String objValue = TrigUtil.getPrettyNSValue(statement.getObject().toString());
+                if (objValue.equals(EventTypes.BURN))  {
+                    return true;
+                }
+                if (EventTypes.isBurn(objValue))  {
                     return true;
                 }
             }

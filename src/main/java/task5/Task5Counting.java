@@ -265,12 +265,12 @@ public class Task5Counting {
                                 String label = participantStatement.getObject().asLiteral().getLexicalForm();
                                 if (!questiondata.getParticipant_first().isEmpty() &&
                                         label.toLowerCase().startsWith(questiondata.getParticipant_first().toLowerCase())) {
-                                    System.out.println("label = " + label);
+                                    //System.out.println("label = " + label);
                                     FIRST = true;
                                 }
                                 if (!questiondata.getParticipant_last().isEmpty() &&
                                         label.toLowerCase().endsWith(questiondata.getParticipant_last().toLowerCase())) {
-                                    System.out.println("label = " + label);
+                                    //System.out.println("label = " + label);
                                     LAST = true;
                                 }
                             }
