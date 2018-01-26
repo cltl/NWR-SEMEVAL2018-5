@@ -426,8 +426,30 @@ public class TemporalReasoning {
         HashMap<Integer, Integer> years = new HashMap<>();
         HashMap<Integer, Integer> months = new HashMap<>();
         ArrayList<Time> timeArrayList = new ArrayList<Time>();
+        ArrayList<String> firstSentencesSubjects = new ArrayList<>();
+        for (int i = 0; i < statements.size(); i++) {
+            // gaf:denotedBy    <http://www.newsreader-project.eu/data/semeval2018-5/0a3e49ad0467c6545e36d754cc08d312#char=78,86&word=w17&term=t17&sentence=1&paragraph=1> ;
+            Statement statement = statements.get(i);
+            if (DEBUG) {
+                System.out.println("statement.getPredicate().getLocalName() = " + statement.getPredicate().getLocalName());
+            }
+            if (statement.getPredicate().getLocalName().equals("denotedBy")) {
+                if (statement.getObject().toString().indexOf("&sentence=0&")>-1 ||
+                    statement.getObject().toString().indexOf("&sentence=1&")>-1 ||
+                    statement.getObject().toString().indexOf("&sentence=2&")>-1
+                ) {
+                    if (!firstSentencesSubjects.contains(statement.getSubject().getURI())) {
+                        firstSentencesSubjects.add(statement.getSubject().getURI());
+                    }
+                }
+            }
+
+        }
         for (int i = 0; i < statements.size(); i++) {
             Statement statement = statements.get(i);
+            if (firstSentencesSubjects.contains(statement.getSubject().getURI())) {
+                continue;
+            }
             if (DEBUG) {
                 System.out.println("statement.getPredicate().getLocalName() = " + statement.getPredicate().getLocalName());
             }

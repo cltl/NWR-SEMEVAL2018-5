@@ -16,6 +16,7 @@ import vu.cltl.triple.objects.TrigTripleData;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -51,7 +52,7 @@ public class Task5CountingVersion4 {
      */
     static public boolean LOGGING = false;
     static OutputStream locationlog = null;
-    static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s1/questions.json " +
+    static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s1test/questions.json " +
             "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/eckg-4-dct --subtask s1 " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel --states /Users/piek/Desktop/SemEval2018/scripts/states.rel " +
             "--period dct  --log";
@@ -213,7 +214,7 @@ public class Task5CountingVersion4 {
                    logString +="\tTotal nr. of trig files with date match = "+myTrigFiles.size()+"\n";
                    if (LOGGING) locationlog.write(logString.getBytes());
                    System.out.println("myTrigFiles.size() = " + myTrigFiles.size());
-
+                   /// We read all the trigfiles that pass the time and type constraints
                    TrigTripleData trigTripleData = TrigReader.simpleRdfReader(myTrigFiles);
                    ArrayList<String> eventKeys = getQuestionDataEventKeys(trigTripleData, questiondata);
 
@@ -280,7 +281,7 @@ public class Task5CountingVersion4 {
         ArrayList<String>  subevents = new ArrayList<>();
         for (int i = 0; i < eventKeys.size(); i++) {
             String eventKey = eventKeys.get(i);
-            if (!eventKey.endsWith("#incident")) {
+            if (eventKey.indexOf("#incident#")>-1) {
                if (!subevents.contains(eventKey)) subevents.add(eventKey);
             }
         }
@@ -327,23 +328,52 @@ public class Task5CountingVersion4 {
         return keys;
     }
 
+    /**
+     * The TrigTripleData is derived from all trigfiles that passed the time and type constraints
+     * We now check what are the events and which events pass the more specific constraints
+     * @param trigTripleData
+     * @param questiondata
+     * @return
+     */
     static ArrayList<String> getQuestionDataEventKeys (TrigTripleData trigTripleData,
                                                        Questiondata questiondata) {
+        HashMap<String, Integer> typeMismatches = new HashMap<>();
         int nTypeMismatch = 0;
         int nLocMismatch = 0;
         int nPartMismatch = 0;
         String logString = "";
         ArrayList<String> keys = new ArrayList<>();
+        ArrayList<String> eventKeys = new ArrayList<>();
         Set keySet = trigTripleData.tripleMapInstances.keySet();
         Iterator<String> keySetKeys = keySet.iterator();
         while (keySetKeys.hasNext()) {
             String key = keySetKeys.next();
-            ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get(key);
+            if (key.indexOf("#incident#")>-1 || key.endsWith("#incident")) {
+                //System.out.println("key = " + key);
+                if (!eventKeys.contains(key)) eventKeys.add(key);
+            }
+        }
+        logString+= "Nr of incidents and subevents in trigfiles = "+eventKeys.size()+"\n";
+
+        for (int i = 0; i < eventKeys.size(); i++) {
+            String eventKey =  eventKeys.get(i);
+            ArrayList<Statement> statements = trigTripleData.tripleMapInstances.get(eventKey);
             boolean MATCH = true;
             if (!checkSubeventType(questiondata, statements)) {
                 //System.out.println("WRONG TYPE");
-                //ArrayList<String> types = getEventTypesAndSubevent(statements);
+                ArrayList<String> types = getEventTypesAndSubevent(statements);
                 //System.out.println(questiondata.getEvent_type()+" mismatching types.toString() = " + types.toString());
+                for (int j = 0; j < types.size(); j++) {
+                    String s = types.get(j);
+                    if (typeMismatches.containsKey(s)) {
+                        Integer cnt = typeMismatches.get(s);
+                        cnt++;
+                        typeMismatches.put(s, cnt);
+                    }
+                    else {
+                        typeMismatches.put(s,1);
+                    }
+                }
                 nTypeMismatch++;
                 MATCH = false;
             }
@@ -390,8 +420,8 @@ public class Task5CountingVersion4 {
             }
 
             if (MATCH) {
-                if (!keys.contains(key)) {
-                    keys.add(key);
+                if (!keys.contains(eventKey)) {
+                    keys.add(eventKey);
                 }
             }
         }
@@ -696,16 +726,21 @@ static ArrayList<String> getMatchingParticipantNames (Questiondata questiondata,
                                   ArrayList<Statement> statements,
                                   TrigTripleData trigTripleData) {
         ArrayList<String> locations = new ArrayList<>();
+        ArrayList<String> mislocations = new ArrayList<>();
         if (questiondata.getCity().isEmpty() && questiondata.getState().isEmpty()) {
             locations.add("NOTREQUIRED");
         }
         ArrayList<String> dbpediaTargetObjects = new ArrayList<>();
         for (int i = 0; i < statements.size(); i++) {
             Statement statement = statements.get(i);
-            if (statement.getPredicate().getLocalName().equals("hasPlace")) {
+            if (statement.getPredicate().getLocalName().equals("hasPlace") ||
+                    statement.getPredicate().getLocalName().equals("a0") ||
+                    statement.getPredicate().getLocalName().equals("a1")) {
+                boolean match = false;
                 if (statement.getObject().toString().equals(questiondata.getCity()) ||
                         statement.getObject().toString().equals(questiondata.getState())) {
                    // System.out.println("DIRECT LOCATION MATCH");
+                    match = true;
                     if (!locations.contains(statement.getObject().toString())) locations.add(statement.getObject().toString());
                 }
                 else {
@@ -734,6 +769,7 @@ static ArrayList<String> getMatchingParticipantNames (Questiondata questiondata,
                                 if (objectStatement.getObject().toString().equals(questiondata.getCity()) ||
                                         objectStatement.getObject().toString().equals(questiondata.getState())) {
                                    // System.out.println("TYPE LOCATION MATCH");
+                                    match = true;
                                     if (!locations.contains(statement.getObject().toString())) locations.add(statement.getObject().toString());
                                 }
                                 else {
@@ -747,6 +783,9 @@ static ArrayList<String> getMatchingParticipantNames (Questiondata questiondata,
                             }
                         }
                     }
+                }
+                if (!match) {
+                     if (!mislocations.contains(statement.getObject().toString())) mislocations.add(statement.getObject().toString());
                 }
             }
         }
@@ -764,9 +803,68 @@ static ArrayList<String> getMatchingParticipantNames (Questiondata questiondata,
                for (int i = 0; i < matchingLocations.size(); i++) {
                    String location =  matchingLocations.get(i);
                    if (!locations.contains(location)) locations.add(location);
-
                }
            }
+        }
+        if (locations.size()==0 && mislocations.size()>0) {
+            ///// desperate attempt:
+            String pattern = mislocations.toString();
+            String questionLocationString = "";
+            if (questiondata.getCity().isEmpty()) {
+                questionLocationString = questiondata.getState();
+            }
+            else {
+                questionLocationString = questiondata.getCity();
+            }
+            ArrayList<String> desparateLocations = new ArrayList<>();
+            ArrayList<String> desparateFields = new ArrayList<>();
+            int idx = questionLocationString.lastIndexOf("/");
+            if (idx>-1) questionLocationString = questionLocationString.substring(idx+1);
+            String [] fields = questionLocationString.split(",");
+            for (int i = 0; i < fields.length; i++) {
+                String field = fields[i];
+                if (field.startsWith("_")) field = field.substring(1);
+                if (field.endsWith("_")) {
+                    field = field.substring(0, field.length() - 1);
+                    System.out.println("field = " + field);
+                }
+                desparateFields.add(field);
+            }
+            for (int j = 0; j < mislocations.size(); j++) {
+                String location = mislocations.get(j);
+                for (int i = 0; i < desparateFields.size(); i++) {
+                    String field = desparateFields.get(i);
+                    if (location.equalsIgnoreCase(field)) {
+                        if (!desparateLocations.contains(field)) {
+                            desparateLocations.add(field);
+                        }
+                    }
+                }
+            }
+            if (desparateLocations.isEmpty()) {
+                for (int j = 0; j < mislocations.size(); j++) {
+                    String location = mislocations.get(j);
+                    for (int i = 0; i < desparateFields.size(); i++) {
+                        String field = desparateFields.get(i);
+                        if (location.indexOf(field)>-1) {
+                            if (!desparateLocations.contains(field)) {
+                                desparateLocations.add(field);
+                            }
+                        }
+                    }
+                }
+            }
+            if (!desparateLocations.isEmpty()) {
+                if (LOGGING) {
+                    String str = questiondata.getState() + ":" + questiondata.getCity() + " desparate locations = "+ desparateLocations.toString()+"\n";
+                    try {
+                        locationlog.write(str.getBytes());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                locations = desparateLocations;
+            }
         }
         return locations;
     }
