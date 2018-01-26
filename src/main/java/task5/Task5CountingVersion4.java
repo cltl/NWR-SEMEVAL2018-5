@@ -50,10 +50,14 @@ public class Task5CountingVersion4 {
       928         "event_type": "killing",
 
      */
+
+    static String typeMismatch = "";
+    static String locMismatch = "";
+    static String partMismatch = "";
     static public boolean LOGGING = false;
     static OutputStream locationlog = null;
     static String testParameters = "--question /Users/piek/Desktop/SemEval2018/trial_data_final/input/s1test/questions.json " +
-            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/eckg-4-dct --subtask s1 " +
+            "--eckg-files /Users/piek/Desktop/SemEval2018/trial_data_final/eckg_4_day_dom_sentence --subtask s1 " +
             "--cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel --states /Users/piek/Desktop/SemEval2018/scripts/states.rel " +
             "--period dct  --log";
     static String subtask = ""; // s1, s2, s3
@@ -250,7 +254,14 @@ public class Task5CountingVersion4 {
                            answerObject.put("answer_docs", fileNames);
                        }
                    }
-                   answerObjectArray.put(questionId, answerObject);
+                   if (subtask.equals("s1")) {
+                        if (fileNames.size()>0) {
+                            answerObjectArray.put(questionId, answerObject);
+                        }
+                   }
+                   else {
+                       answerObjectArray.put(questionId, answerObject);
+                   }
                }
                try (FileWriter file = new FileWriter(parentFolder+"/"+"answers.json")) {
                    ObjectMapper mapper = new ObjectMapper();
@@ -338,6 +349,9 @@ public class Task5CountingVersion4 {
     static ArrayList<String> getQuestionDataEventKeys (TrigTripleData trigTripleData,
                                                        Questiondata questiondata) {
         HashMap<String, Integer> typeMismatches = new HashMap<>();
+        typeMismatch = "";
+        partMismatch = "";
+        locMismatch = "";
         int nTypeMismatch = 0;
         int nLocMismatch = 0;
         int nPartMismatch = 0;
@@ -387,7 +401,7 @@ public class Task5CountingVersion4 {
                     MATCH = false;
                 } else {
                     if (!matchingLocations.contains("NOTREQUIRED")) {
-                        logString += "\tLocation match = " + matchingLocations.toString() + "\n";
+                       if (LOGGING) logString += "\tLocation match = " + matchingLocations.toString() + "\n";
                     }
                 }
                 /*if (!checkLocation(questiondata, statements,trigTripleData)) {
@@ -426,11 +440,21 @@ public class Task5CountingVersion4 {
             }
         }
         System.out.println("Nr. of matching incidents and subevents keys = " + keys.size());
-        logString +="\tNr. of matching incidents and subevents keys = " + keys.size()+"\n";
-        if (keys.size()==0) {
-            logString += "\t" + "type mismatches = " + nTypeMismatch + "," + "location mismatches = " + nLocMismatch + "," + "particpant mismatches = " + nPartMismatch + "\n";
-        }
         if (LOGGING) {
+            logString += "\tNr. of matching incidents and subevents keys = " + keys.size() + "\n";
+            if (keys.size() == 0) {
+                logString += "\t" + "type mismatches = " + nTypeMismatch + "," + "location mismatches = " + nLocMismatch + "," + "particpant mismatches = " + nPartMismatch + "\n";
+                Set keySetMisType = typeMismatches.keySet();
+                Iterator<String> types = keySetMisType.iterator();
+                while (types.hasNext()) {
+                    String type = types.next();
+                    Integer cnt = typeMismatches.get(type);
+                    logString += type + ":" + cnt + ",";
+                }
+                logString += "\n";
+                logString += locMismatch+"\n";
+                logString += partMismatch+"\n";
+            }
             try {
                 locationlog.write(logString.getBytes());
             } catch (IOException e) {
@@ -497,6 +521,8 @@ static ArrayList<String> getMatchingParticipantNames (Questiondata questiondata,
                                          ArrayList<Statement> statements,
                                          TrigTripleData trigTripleData) {
         ArrayList<String> participants = new ArrayList<>();
+        ArrayList<String> misparticipants = new ArrayList<>();
+
             if (questiondata.getParticipant_first().isEmpty() && questiondata.getParticipant_last().isEmpty()) {
                 participants.add("NOTREQUIRED");
             }
@@ -531,9 +557,17 @@ static ArrayList<String> getMatchingParticipantNames (Questiondata questiondata,
                                     //System.out.println("label = " + label);
                                     if (!participants.contains(label)) participants.add(label);
                                 }
+                                if (participants.size()==0) {
+                                    if (!misparticipants.contains(label)) misparticipants.add(label);
+                                }
                             }
                         }
                     }
+                }
+            }
+            if (LOGGING) {
+                if (participants.size()==0 && misparticipants.size()>0) {
+                        partMismatch += " mismatches = "+misparticipants.toString()+"\n";
                 }
             }
             return participants;
@@ -854,15 +888,12 @@ static ArrayList<String> getMatchingParticipantNames (Questiondata questiondata,
                     }
                 }
             }
-            if (!desparateLocations.isEmpty()) {
+            if (desparateLocations.isEmpty()) {
                 if (LOGGING) {
-                    String str = questiondata.getState() + ":" + questiondata.getCity() + " desparate locations = "+ desparateLocations.toString()+"\n";
-                    try {
-                        locationlog.write(str.getBytes());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    locMismatch += " mislocations = "+ mislocations.toString()+"\n";
                 }
+            }
+            else {
                 locations = desparateLocations;
             }
         }

@@ -12,6 +12,36 @@ import java.util.*;
  */
 public class Util {
 
+
+    static public ArrayList<Statement> filterBySentences (ArrayList<Statement> statements, int sentences) {
+        ArrayList<Statement> filteredStatements = new ArrayList<>();
+        ArrayList<String> firstSentencesSubjects = new ArrayList<>();
+        for (int i = 0; i < statements.size(); i++) {
+           // gaf:denotedBy    <http://www.newsreader-project.eu/data/semeval2018-5/0a3e49ad0467c6545e36d754cc08d312#char=78,86&word=w17&term=t17&sentence=1&paragraph=1> ;
+           Statement statement = statements.get(i);
+            for (int j = 0; j <= sentences; j++) {
+                if (statement.getPredicate().getLocalName().equals("denotedBy")) {
+                    String filter = "&sentence="+j+"&";
+                    if (statement.getObject().toString().indexOf(filter)>-1 ) {
+                       if (!firstSentencesSubjects.contains(statement.getSubject().getURI())) {
+                           firstSentencesSubjects.add(statement.getSubject().getURI());
+                       }
+                    }
+               }
+            }
+        }
+        for (int i = 0; i < statements.size(); i++) {
+            Statement statement = statements.get(i);
+            if (firstSentencesSubjects.contains(statement.getSubject().getURI())) {
+                continue;
+            }
+            else {
+                filteredStatements.add(statement);
+            }
+        }
+        return filteredStatements;
+    }
+
     static public boolean hasFile (ArrayList<File> files, File file) {
         for (int i = 0; i < files.size(); i++) {
             File file1 = files.get(i);
