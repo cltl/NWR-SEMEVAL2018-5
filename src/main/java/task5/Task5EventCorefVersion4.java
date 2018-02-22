@@ -121,9 +121,9 @@ public class Task5EventCorefVersion4 {
         /// use the document as a starting point:
         // 1. group documents per temporal container
         // 2. group documents per container for dominant event type
-        // 2. compare documents for incident identity within time-type container
-        // 3. lump incident level events and sub events across all identical documents
-        // 4. link subevents events to participants within and across all documents
+        // 3. compare documents for incident identity within time-type container
+        // 4. lump incident level events and sub events across all identical documents
+        // 5. link subevents events to participants within and across all documents
         // 5. Dump <date>.eckgs to <date>.RDF-TRiG within the type containers: SHOOT, BURN, DISMISS
         // 6. Create the CoNLL files
 

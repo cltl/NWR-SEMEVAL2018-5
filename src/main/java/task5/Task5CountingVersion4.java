@@ -156,7 +156,7 @@ public class Task5CountingVersion4 {
                    /// Trig files are divided on the basis of the dominant type over different subfolders: SHOOT, BURN, DISMISS
                    /// Within each subfolder, a separate <date>.trig file is created
                    ArrayList<File> myTrigFiles = new ArrayList<>();
-                   String eventType = "SHOOT";
+                   String eventType = EventTypes.SHOOT;
                    if (questiondata.getEvent_type().equals("fire_burning")) {
                        eventType = EventTypes.BURN;
                    }
