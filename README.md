@@ -1,5 +1,6 @@
 # NWR-SEMEVAL2018-T5
 NewsReader participation to task 5 of SemEval2018
+Version 4
 Contact: piek.vossen@vu.nl
 
 Our goal is to build a wrapper around the NewsReader system to participate in the task.
