@@ -8,9 +8,9 @@ SUBMISSION=$1
 INPUT=$2
 ECKG=$3
 PERIOD=$4
-#SUBMISSION="/Users/piek/Desktop/SemEval2018/trial_data_final/submission"
-#QUESTIONPATH="/Users/piek/Desktop/SemEval2018/trial_data_final/input"
-#ECKG="/Users/piek/Desktop/SemEval2018/trial_data_final/eckg"
+#SUBMISSION="/Users/piek/Desktop/SemEval2018/test_data/submission"
+#QUESTIONPATH="/Users/piek/Desktop/SemEval2018/test_data/input"
+#ECKG="/Users/piek/Desktop/SemEval2018/test_data/eckg"
 #PERIOD="weekend"
 
 java -Xmx2000m -cp "$LIB/nwr-semeval2018-5-1.0-SNAPSHOT-jar-with-dependencies.jar" task5.Task5CountingVersion4 --question $INPUT/s1/questions.json --eckg-files $ECKG --subtask "s1" --cities /Users/piek/Desktop/SemEval2018/scripts/cities.rel --states /Users/piek/Desktop/SemEval2018/scripts/states.rel --period $4
